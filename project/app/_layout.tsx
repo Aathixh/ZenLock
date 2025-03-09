@@ -1,9 +1,9 @@
 import * as React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import SplashScreen from "./Splash";
+import SplashScreen from "./screens/Splash";
 import { StatusBar } from "expo-status-bar";
-import HomeScreen from "./Home";
+import HomeScreen from "./screens/Home";
 import { enableScreens } from "react-native-screens";
 enableScreens();
 const Stack = createStackNavigator();
