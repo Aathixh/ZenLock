@@ -8,8 +8,11 @@ import PadLock from "../../assets/PadLock";
 import WifiIcon from "../../assets/WifiIcon";
 import WifiConnectedIcon from "../../assets/WifiConnectedIcon";
 import BatteryIcon from "../../assets/BatteryIcon";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { RootStackParamList } from "../types";
 
 const Home = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [doorState, setDoorState] = useState("closed");
   const [connected, setConnected] = useState(false);
   const [batteryPercentage, setBatteryPercentage] = useState(100);
@@ -47,7 +50,10 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.connectBtn}>
+      <TouchableOpacity
+        style={styles.connectBtn}
+        onPress={() => navigation.navigate("WifiScan")}
+      >
         {connected ? <WifiConnectedIcon /> : <WifiIcon />}
       </TouchableOpacity>
 
