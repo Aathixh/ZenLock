@@ -7,10 +7,12 @@ import Lock from "../../assets/Lock";
 import PadLock from "../../assets/PadLock";
 import WifiIcon from "../../assets/WifiIcon";
 import WifiConnectedIcon from "../../assets/WifiConnectedIcon";
+import BatteryIcon from "../../assets/BatteryIcon";
 
 const Home = () => {
   const [doorState, setDoorState] = useState("closed");
   const [connected, setConnected] = useState(false);
+  const [batteryPercentage, setBatteryPercentage] = useState(100);
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -48,6 +50,18 @@ const Home = () => {
       <TouchableOpacity style={styles.connectBtn}>
         {connected ? <WifiConnectedIcon /> : <WifiIcon />}
       </TouchableOpacity>
+
+      <View style={styles.statusContainer}>
+        <Text
+          style={[styles.statusText, { color: connected ? "green" : "red" }]}
+        >
+          {connected ? "Connected" : "Not Connected"}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <BatteryIcon />
+          <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -117,7 +131,7 @@ const styles = StyleSheet.create({
     height: RFValue(50),
     alignItems: "center",
     justifyContent: "center",
-    bottom: RFValue(150),
+    bottom: RFValue(100),
     shadowOffset: {
       width: 5,
       height: 15,
@@ -130,5 +144,22 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: RFValue(32),
     fontFamily: "Poppins-Bold",
+  },
+  statusContainer: {
+    backgroundColor: "#fff",
+    width: RFValue(300),
+    height: RFValue(80),
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: RFValue(20),
+    bottom: RFValue(50),
+  },
+  statusText: {
+    fontFamily: "Poppins-Bold",
+    fontSize: RFValue(18),
+  },
+  batteryPercent: {
+    fontFamily: "Poppins-SemiBold",
+    left: RFValue(5),
   },
 });
