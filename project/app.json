@@ -1,17 +1,12 @@
 {
   "expo": {
-    "name": "project",
-    "slug": "project",
+    "name": "DoorAutomation",
+    "slug": "DoorAutomation",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -20,13 +15,21 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.project"
+      "package": "com.anonymous.doorautomation",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "react-native-wifi-reborn"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "643b2762-887f-488b-ba23-e608eb475bc1"
+      }
+    }
   }
 }

@@ -1,4 +1,10 @@
-import { View, Text, Button, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Button,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import React, { useState } from "react";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { BlurView } from "@react-native-community/blur";
@@ -9,16 +15,20 @@ interface RedirectBoxProps {
   ssid: string;
   connectFn: (password: string) => void;
   inputfield: boolean;
+  BtnTitle: string;
   cancelBtn: boolean;
   cancelFn?: () => void;
+  loading?: boolean;
 }
 const RedirectBox: React.FC<RedirectBoxProps> = ({
   title,
   ssid,
   connectFn,
   inputfield,
+  BtnTitle,
   cancelBtn,
   cancelFn,
+  loading,
 }) => {
   const [password, setPassword] = useState("");
   return (
@@ -39,18 +49,25 @@ const RedirectBox: React.FC<RedirectBoxProps> = ({
             onChangeText={setPassword}
           />
         )}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-around",
-            width: RFValue(200),
-          }}
-        >
-          <Button title="Connect" onPress={() => connectFn(password)} />
-          {cancelBtn && (
-            <Button title="Cancel" onPress={cancelFn} color={"red"} />
-          )}
-        </View>
+        {!loading ? (
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-around",
+              width: RFValue(200),
+            }}
+          >
+            <Button title={BtnTitle} onPress={() => connectFn(password)} />
+            {cancelBtn && (
+              <Button title="Cancel" onPress={cancelFn} color={"red"} />
+            )}
+          </View>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#0000ff" />
+            <Text style={styles.loadingText}>Sending credentials...</Text>
+          </View>
+        )}
       </View>
     </>
   );
@@ -92,5 +109,14 @@ const styles = StyleSheet.create({
     borderRadius: RFValue(5),
     bottom: RFValue(12),
     padding: RFValue(5),
+  },
+  loadingContainer: {
+    alignItems: "center",
+    height: RFValue(30),
+  },
+  loadingText: {
+    fontSize: RFValue(12),
+    fontFamily: "Poppins-Reg",
+    color: "#000",
   },
 });

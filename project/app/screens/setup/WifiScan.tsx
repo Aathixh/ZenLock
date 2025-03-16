@@ -1,15 +1,12 @@
 import {
   Alert,
-  Button,
-  PermissionsAndroid,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   RefreshControl,
-  TextInput,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FlatList } from "react-native-gesture-handler";
 import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
 import * as Location from "expo-location";
@@ -17,13 +14,20 @@ import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
 import RedirectBox from "../../common/RedirectBox";
 import * as IntentLauncher from "expo-intent-launcher";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { RootStackParamList } from "../../types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const WifiScan = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [networks, setNetworks] = useState<WifiEntry[]>([]);
   const [locationPermission, setLocationPermission] = useState(false);
   const [connectedToDoorLock, setConnectedToDoorLock] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedWifi, setSelectedWifi] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [credentialsSent, setCredentialsSent] = useState(false);
+  const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
 
   useEffect(() => {
     requestLocationPermission();
@@ -76,17 +80,63 @@ const WifiScan = () => {
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await scanWifiNetworks();
     setRefreshing(false);
-  };
+  }, [scanWifiNetworks]);
 
-  const handleConnect = (password: string) => {
-    // Send the password to the ESP32
-    console.log(`Connecting to ${selectedWifi} with password ${password}`);
-    // Add your logic to send the password to the ESP32 here
-  };
+  const handleConnect = useCallback(
+    async (password: string) => {
+      try {
+        setLoading(true);
+        const response = await fetch("http://192.168.4.1/setup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            ssid: selectedWifi,
+            password: password,
+          }).toString(),
+        });
+        const responseText = await response.text();
+        console.log(response);
+        if (response.ok) {
+          const ipAddress = responseText.split("IP: ")[1];
+          const ssid = selectedWifi;
+          await AsyncStorage.setItem("esp32IpAddress", ipAddress);
+          await AsyncStorage.setItem("homeWifiSSID", ssid);
+          setEsp32IpAddress(ipAddress);
+          Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
+          setCredentialsSent(true);
+        } else {
+          Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
+        }
+      } catch (error) {
+        Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
+        console.error("Error sending Wi-Fi credentials to ESP32:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedWifi]
+  );
+
+  const connectToHomeWifi = useCallback(async () => {
+    await IntentLauncher.startActivityAsync(
+      IntentLauncher.ActivityAction.WIFI_SETTINGS
+    );
+    const currentSSID = await WifiManager.getCurrentWifiSSID();
+    if (currentSSID === selectedWifi) {
+      Alert.alert("Connected", "Successfully connected to Home Wi-Fi.", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("Home", { connected: true }),
+        },
+      ]);
+    }
+  }, [selectedWifi, navigation]);
 
   return (
     <View style={styles.container}>
@@ -95,10 +145,11 @@ const WifiScan = () => {
         style={styles.background}
       />
       <Text style={styles.head}>Setup DoorLock</Text>
-      {connectedToDoorLock && (
+      {!connectedToDoorLock && (
         <RedirectBox
           title="Please Connect to DoorLock Wifi Hotspot"
           ssid="DoorLock"
+          BtnTitle="Connect"
           inputfield={false}
           connectFn={openWifiSettings}
           cancelBtn={false}
@@ -133,14 +184,27 @@ const WifiScan = () => {
         />
       </View>
 
-      {selectedWifi && (
+      {selectedWifi && !credentialsSent && (
         <RedirectBox
           title="Enter Wifi Password"
           ssid={selectedWifi}
           connectFn={handleConnect}
+          BtnTitle="Send"
           inputfield={true}
           cancelBtn={true}
           cancelFn={() => setSelectedWifi("")}
+          loading={loading}
+        />
+      )}
+
+      {credentialsSent && (
+        <RedirectBox
+          title="Please Connect to Home Wifi"
+          ssid={selectedWifi}
+          BtnTitle="Connect"
+          inputfield={false}
+          connectFn={connectToHomeWifi}
+          cancelBtn={false}
         />
       )}
     </View>

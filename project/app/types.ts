@@ -1,5 +1,7 @@
 export type RootStackParamList = {
   Splash: undefined;
-  Home: undefined;
+  Home: {
+    connected?: boolean;
+  };
   WifiScan: undefined;
 };
