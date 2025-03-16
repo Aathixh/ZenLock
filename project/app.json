@@ -16,17 +16,21 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.doorautomation",
-      "permissions": ["android.permission.ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["react-native-wifi-reborn"],
+    "plugins": [
+      "react-native-wifi-reborn"
+    ],
+    "owner": "aathixh",
     "extra": {
       "eas": {
-        "projectId": "643b2762-887f-488b-ba23-e608eb475bc1"
+        "projectId": "4afca5e5-6047-4bb0-ae8e-188eb7a328d1"
       }
-    },
-    "owner": "aathixh"
+    }
   }
 }

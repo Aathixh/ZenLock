@@ -6,7 +6,7 @@ import {
   View,
   RefreshControl,
 } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FlatList } from "react-native-gesture-handler";
 import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
 import * as Location from "expo-location";
@@ -80,50 +80,47 @@ const WifiScan = () => {
     }
   };
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
     await scanWifiNetworks();
     setRefreshing(false);
-  }, [scanWifiNetworks]);
+  };
 
-  const handleConnect = useCallback(
-    async (password: string) => {
-      try {
-        setLoading(true);
-        const response = await fetch("http://192.168.4.1/setup", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            ssid: selectedWifi,
-            password: password,
-          }).toString(),
-        });
-        const responseText = await response.text();
-        console.log(response);
-        if (response.ok) {
-          const ipAddress = responseText.split("IP: ")[1];
-          const ssid = selectedWifi;
-          await AsyncStorage.setItem("esp32IpAddress", ipAddress);
-          await AsyncStorage.setItem("homeWifiSSID", ssid);
-          setEsp32IpAddress(ipAddress);
-          Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
-          setCredentialsSent(true);
-        } else {
-          Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
-        }
-      } catch (error) {
-        Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
-        console.error("Error sending Wi-Fi credentials to ESP32:", error);
-      } finally {
-        setLoading(false);
+  const handleConnect = async (password: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://192.168.4.1/setup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          ssid: selectedWifi,
+          password: password,
+        }).toString(),
+      });
+      const responseText = await response.text();
+      console.log(response);
+      if (response.ok) {
+        const ipAddress = responseText.split("IP: ")[1];
+        const ssid = selectedWifi;
+        await AsyncStorage.setItem("esp32IpAddress", ipAddress);
+        await AsyncStorage.setItem("homeWifiSSID", ssid);
+        setEsp32IpAddress(ipAddress);
+        Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
+        setCredentialsSent(true);
+      } else {
+        Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
       }
-    },
-    [selectedWifi]
-  );
+    } catch (error) {
+      Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
+      console.error("Error sending Wi-Fi credentials to ESP32:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const connectToHomeWifi = useCallback(async () => {
+  const connectToHomeWifi = async () => {
     await IntentLauncher.startActivityAsync(
       IntentLauncher.ActivityAction.WIFI_SETTINGS
     );
@@ -136,7 +133,7 @@ const WifiScan = () => {
         },
       ]);
     }
-  }, [selectedWifi, navigation]);
+  };
 
   return (
     <View style={styles.container}>

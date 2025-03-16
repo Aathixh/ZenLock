@@ -1,7 +1,6 @@
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import Lock from "../../assets/Lock";
 import PadLock from "../../assets/PadLock";
@@ -10,7 +9,7 @@ import WifiConnectedIcon from "../../assets/WifiConnectedIcon";
 import BatteryIcon from "../../assets/BatteryIcon";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types";
-import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
+import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Home = () => {
@@ -26,7 +25,7 @@ const Home = () => {
     fetchBatteryPercentage();
   }, [esp32IpAddress]);
 
-  const fetchBatteryPercentage = useCallback(async () => {
+  const fetchBatteryPercentage = async () => {
     if (!esp32IpAddress) return;
     const url = `http://${esp32IpAddress}/battery`;
     try {
@@ -41,24 +40,24 @@ const Home = () => {
       Alert.alert("Error", "Unable to fetch battery percentage.");
       console.error("Error fetching battery percentage:", error);
     }
-  }, [esp32IpAddress]);
+  };
 
-  const checkStoredDoorState = useCallback(async () => {
+  const checkStoredDoorState = async () => {
     const storedDoorState = await AsyncStorage.getItem("door_state");
     if (storedDoorState) {
       setDoorState(storedDoorState);
     }
-  }, []);
+  };
 
-  const checkStoredIpAddress = useCallback(async () => {
+  const checkStoredIpAddress = async () => {
     const storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
     if (storedIpAddress) {
       setEsp32IpAddress(storedIpAddress);
       verifyHomeWifiConnection();
     }
-  }, []);
+  };
 
-  const verifyHomeWifiConnection = useCallback(async () => {
+  const verifyHomeWifiConnection = async () => {
     try {
       const currentSSID = await WifiManager.getCurrentWifiSSID();
       const storedSSID = await AsyncStorage.getItem("homeWifiSSID");
@@ -72,9 +71,9 @@ const Home = () => {
       Alert.alert("Error", "Unable to verify Home Wi-Fi connection.");
       console.error("Error verifying Home Wi-Fi connection:", error);
     }
-  }, []);
+  };
 
-  const toggleDoorLock = useCallback(async () => {
+  const toggleDoorLock = async () => {
     const url = `http://${esp32IpAddress}/${
       doorState === "closed" ? "open" : "close"
     }`;
@@ -90,7 +89,7 @@ const Home = () => {
       Alert.alert("Error", "Unable to toggle door lock.");
       console.error("Error toggling door lock:", error);
     }
-  }, [doorState, esp32IpAddress]);
+  };
 
   return (
     <View style={styles.container}>
