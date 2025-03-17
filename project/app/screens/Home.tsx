@@ -128,6 +128,7 @@ const Home = () => {
       <TouchableOpacity
         style={styles.connectBtn}
         onPress={() => navigation.navigate("WifiScan")}
+        disabled={connected}
       >
         {connected ? <WifiConnectedIcon /> : <WifiIcon />}
       </TouchableOpacity>
