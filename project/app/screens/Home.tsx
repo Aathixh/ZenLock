@@ -1,5 +1,13 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  BackHandler,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
 import { RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
 import Lock from "../../assets/Lock";
@@ -11,19 +19,47 @@ import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import RedirectBox from "../common/RedirectBox";
 
 const Home = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [doorState, setDoorState] = useState("closed");
   const [connected, setConnected] = useState(false);
-  const [batteryPercentage, setBatteryPercentage] = useState(100);
+  const [batteryPercentage, setBatteryPercentage] = useState("");
   const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
+  const [showExitAlert, setShowExitAlert] = useState(false);
 
   useEffect(() => {
-    checkStoredIpAddress();
-    checkStoredDoorState();
-    fetchBatteryPercentage();
+    const initialize = async () => {
+      await checkStoredIpAddress();
+      await checkStoredDoorState();
+      await fetchBatteryPercentage();
+    };
+
+    initialize();
+
+    const interval = setInterval(() => {
+      checkStoredIpAddress();
+      checkStoredDoorState();
+      fetchBatteryPercentage();
+    }, 60000); // Check every 60 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
   }, [esp32IpAddress]);
+
+  useEffect(() => {
+    const backAction = () => {
+      setShowExitAlert(true);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   const fetchBatteryPercentage = async () => {
     if (!esp32IpAddress) return;
@@ -53,25 +89,31 @@ const Home = () => {
     const storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
     if (storedIpAddress) {
       setEsp32IpAddress(storedIpAddress);
-      verifyHomeWifiConnection();
+      verifyHomeWifiConnection(storedIpAddress);
     }
   };
 
-  const verifyHomeWifiConnection = async () => {
+  const verifyHomeWifiConnection = useCallback(async (ipAddress: string) => {
     try {
       const currentSSID = await WifiManager.getCurrentWifiSSID();
       const storedSSID = await AsyncStorage.getItem("homeWifiSSID");
-      if (currentSSID === storedSSID) {
+      const response = await fetch(`http://${ipAddress}/ping`);
+
+      if (currentSSID === storedSSID && response.ok) {
         setConnected(true);
-        Alert.alert("Connected", "Successfully connected to Home Wi-Fi.");
       } else {
+        setConnected(false);
         Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
       }
-    } catch (error) {
-      Alert.alert("Error", "Unable to verify Home Wi-Fi connection.");
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        "Connection Lost.\n" + "Check Home Wi-Fi connection."
+      );
+      setConnected(false);
       console.error("Error verifying Home Wi-Fi connection:", error);
     }
-  };
+  }, []);
 
   const toggleDoorLock = async () => {
     const url = `http://${esp32IpAddress}/${
@@ -91,6 +133,15 @@ const Home = () => {
     }
   };
 
+  const handleExitApp = () => {
+    setShowExitAlert(false);
+    BackHandler.exitApp();
+  };
+
+  const handleCancelExit = () => {
+    setShowExitAlert(false);
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -103,7 +154,11 @@ const Home = () => {
       </Text>
 
       <View style={styles.centerContainer}>
-        <TouchableOpacity style={styles.outerCircle} onPress={toggleDoorLock}>
+        <TouchableOpacity
+          style={styles.outerCircle}
+          onPress={toggleDoorLock}
+          disabled={!connected}
+        >
           <View style={{ marginTop: RFValue(50) }}>
             {doorState === "closed" ? <Lock /> : <PadLock />}
           </View>
@@ -144,6 +199,34 @@ const Home = () => {
           <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
         </View>
       </View>
+
+      <Modal
+        visible={showExitAlert}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCancelExit}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Do you want to exit?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={handleCancelExit}
+              >
+                <Text style={styles.modalButtonText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={handleExitApp}
+              >
+                <Text style={styles.modalButtonText}>Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -243,5 +326,38 @@ const styles = StyleSheet.create({
   batteryPercent: {
     fontFamily: "Poppins-SemiBold",
     left: RFValue(5),
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.66)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "white",
+    padding: RFValue(20),
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: RFValue(16),
+    fontFamily: "Poppins-Bold",
+    marginBottom: RFValue(10),
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    alignItems: "center",
+    padding: 10,
+  },
+  modalButtonText: {
+    fontSize: RFValue(16),
+    color: "blue",
+    fontFamily: "Poppins-Med",
   },
 });
