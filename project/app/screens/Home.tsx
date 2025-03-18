@@ -1,5 +1,6 @@
 import {
   Alert,
+  Animated,
   BackHandler,
   Modal,
   StyleSheet,
@@ -7,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
 import Lock from "../../assets/Lock";
@@ -15,7 +16,11 @@ import PadLock from "../../assets/PadLock";
 import WifiIcon from "../../assets/WifiIcon";
 import WifiConnectedIcon from "../../assets/WifiConnectedIcon";
 import BatteryIcon from "../../assets/BatteryIcon";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+import {
+  NavigationProp,
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
 import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -29,6 +34,9 @@ const Home = () => {
   const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
   const [showExitAlert, setShowExitAlert] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetVisible, setResetVisible] = useState(false);
+  const resetAnim = useRef(new Animated.Value(0)).current;
+  const wifiAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const initialize = async () => {
@@ -43,24 +51,26 @@ const Home = () => {
       checkStoredIpAddress();
       checkStoredDoorState();
       fetchBatteryPercentage();
-    }, 60000); // Check every 60 seconds
+    }, 180000); // Check every 120 seconds
 
     return () => clearInterval(interval); // Cleanup on unmount
   }, [esp32IpAddress]);
 
-  useEffect(() => {
-    const backAction = () => {
-      setShowExitAlert(true);
-      return true;
-    };
+  useFocusEffect(
+    useCallback(() => {
+      const backAction = () => {
+        setShowExitAlert(true);
+        return true;
+      };
 
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        backAction
+      );
 
-    return () => backHandler.remove();
-  }, []);
+      return () => backHandler.remove();
+    }, [])
+  );
 
   const fetchBatteryPercentage = async () => {
     if (!esp32IpAddress) return;
@@ -70,12 +80,11 @@ const Home = () => {
       if (response.ok) {
         const data = await response.json();
         setBatteryPercentage(data.battery);
-      } else {
-        Alert.alert("Error", "Unable to fetch battery percentage.");
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to fetch battery percentage.");
+      // Alert.alert("Error", "Unable to fetch battery percentage.");
       console.error("Error fetching battery percentage:", error);
+      setBatteryPercentage("");
     }
   };
 
@@ -139,12 +148,99 @@ const Home = () => {
 
   const handleExitApp = () => {
     setShowExitAlert(false);
-    console.log(animations);
     BackHandler.exitApp();
   };
 
   const handleCancelExit = () => {
     setShowExitAlert(false);
+  };
+
+  const resetESP32 = async () => {
+    if (!esp32IpAddress) return;
+    const pingUrl = `http://${esp32IpAddress}/ping`;
+    const resetUrl = `http://${esp32IpAddress}/reset`;
+
+    try {
+      setLoading(true);
+
+      // Ping the ESP32 to check the connection
+      const pingResponse = await fetch(pingUrl);
+      if (!pingResponse.ok) {
+        Alert.alert("Error", "ESP32 is not connected.");
+        return;
+      }
+
+      // Send the reset command with a timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 10 seconds timeout
+
+      await fetch(resetUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      // Assuming success since ESP32 won't send a response back
+      Alert.alert("Success", "ESP32 has been reset.");
+    } catch (error: any) {
+      // Assuming success if there is a network error or timeout
+      if (
+        error.name === "AbortError" ||
+        error.message.includes("Network request failed")
+      ) {
+        console.log("ESP32 has been reset.");
+      } else {
+        Alert.alert("Error", "Unable to reset ESP32.");
+        console.error("Error resetting ESP32:", error);
+      }
+    } finally {
+      setLoading(false);
+      // Reset the animation values to ensure the Wi-Fi connect button returns to its original position
+      Animated.parallel([
+        Animated.timing(resetAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wifiAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setResetVisible(false);
+        setConnected(false);
+      });
+    }
+    setBatteryPercentage("");
+  };
+
+  const toggleResetButton = () => {
+    if (resetVisible) {
+      Animated.parallel([
+        Animated.timing(resetAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wifiAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setResetVisible(false));
+    } else {
+      setResetVisible(true);
+      Animated.parallel([
+        Animated.timing(resetAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wifiAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
   };
 
   return (
@@ -205,13 +301,54 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.connectBtn}
-        onPress={() => navigation.navigate("WifiScan")}
-        disabled={connected}
+      <Animated.View
+        style={[
+          styles.connectBtn,
+          {
+            transform: [
+              {
+                translateX: wifiAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -80],
+                }),
+              },
+            ],
+          },
+        ]}
       >
-        {connected ? <WifiConnectedIcon /> : <WifiIcon />}
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={
+            connected
+              ? toggleResetButton
+              : () => navigation.navigate("WifiScan")
+          }
+        >
+          {connected ? <WifiConnectedIcon /> : <WifiIcon />}
+        </TouchableOpacity>
+      </Animated.View>
+
+      {connected && resetVisible && (
+        <Animated.View
+          style={[
+            styles.resetBtn,
+            {
+              transform: [
+                {
+                  translateX: resetAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 50],
+                  }),
+                },
+              ],
+              opacity: resetAnim,
+            },
+          ]}
+        >
+          <TouchableOpacity onPress={resetESP32} disabled={loading}>
+            <Text style={styles.resetBtnText}>Reset</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
 
       <View style={styles.statusContainer}>
         <Text
@@ -272,12 +409,13 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   centerContainer: {
-    justifyContent: "center",
-    bottom: RFValue(50),
+    bottom: RFValue(90),
+    height: RFValue(50),
     flex: 1,
   },
   outerCircle: {
     alignItems: "center",
+    top: RFValue(130),
     shadowOffset: {
       width: 5,
       height: 15,
@@ -331,6 +469,30 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowRadius: 10,
     elevation: 20,
+  },
+
+  resetBtn: {
+    borderRadius: 50,
+    backgroundColor: "#fff",
+    width: RFValue(150),
+    height: RFValue(50),
+    alignItems: "center",
+    justifyContent: "center",
+    bottom: RFValue(180),
+    shadowOffset: {
+      width: 5,
+      height: 15,
+    },
+    shadowOpacity: 0.9,
+    shadowColor: "#000",
+    shadowRadius: 10,
+    elevation: 20,
+    position: "absolute",
+  },
+  resetBtnText: {
+    fontSize: RFValue(16),
+    fontFamily: "Poppins-Bold",
+    color: "red",
   },
   btnText: {
     fontSize: RFValue(32),
