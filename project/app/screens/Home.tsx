@@ -19,7 +19,7 @@ import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import RedirectBox from "../common/RedirectBox";
+import LoaderKit, { animations } from "react-native-loader-kit";
 
 const Home = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -28,6 +28,7 @@ const Home = () => {
   const [batteryPercentage, setBatteryPercentage] = useState("");
   const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
   const [showExitAlert, setShowExitAlert] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
@@ -120,6 +121,7 @@ const Home = () => {
       doorState === "closed" ? "open" : "close"
     }`;
     try {
+      setLoading(true);
       const response = await fetch(url);
       if (response.ok) {
         setDoorState(doorState === "closed" ? "open" : "closed");
@@ -130,11 +132,14 @@ const Home = () => {
     } catch (error) {
       Alert.alert("Error", "Unable to toggle door lock.");
       console.error("Error toggling door lock:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleExitApp = () => {
     setShowExitAlert(false);
+    console.log(animations);
     BackHandler.exitApp();
   };
 
@@ -157,14 +162,34 @@ const Home = () => {
         <TouchableOpacity
           style={styles.outerCircle}
           onPress={toggleDoorLock}
-          disabled={!connected}
+          disabled={!connected || loading}
         >
-          <View style={{ marginTop: RFValue(50) }}>
-            {doorState === "closed" ? <Lock /> : <PadLock />}
-          </View>
-          <Text style={styles.btnText}>
-            {doorState === "closed" ? "Open" : "Close"}
-          </Text>
+          {!loading && (
+            <View style={{ marginTop: RFValue(50) }}>
+              {doorState === "closed" ? <Lock /> : <PadLock />}
+            </View>
+          )}
+          {!loading && (
+            <Text style={styles.btnText}>
+              {doorState === "closed" ? "Open" : "Close"}
+            </Text>
+          )}
+          {loading && (
+            <LoaderKit
+              style={{
+                width: RFValue(70),
+                height: RFValue(70),
+                marginTop: RFValue(92),
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+              }}
+              name={animations[7]}
+              color="black"
+            />
+          )}
+
           <View
             style={[
               styles.led,
@@ -268,10 +293,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   led: {
-    top: RFValue(10),
+    top: RFValue(210),
     width: RFValue(35),
     height: RFValue(10),
     borderRadius: RFValue(5),
+    position: "absolute",
   },
   head: {
     marginTop: 70,
