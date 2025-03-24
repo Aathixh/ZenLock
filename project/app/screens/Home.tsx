@@ -2,6 +2,7 @@ import {
   Alert,
   Animated,
   BackHandler,
+  Dimensions,
   Modal,
   StyleSheet,
   Text,
@@ -25,6 +26,8 @@ import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoaderKit, { animations } from "react-native-loader-kit";
+
+const { width, height } = Dimensions.get("window");
 
 const Home = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -51,10 +54,16 @@ const Home = () => {
       checkStoredIpAddress();
       checkStoredDoorState();
       fetchBatteryPercentage();
-    }, 180000); // Check every 120 seconds
+    }, 60000); // Check every 60 seconds
 
     return () => clearInterval(interval); // Cleanup on unmount
   }, [esp32IpAddress]);
+
+  useEffect(() => {
+    if (!connected) {
+      resetConnectButton();
+    }
+  }, [connected]);
 
   useFocusEffect(
     useCallback(() => {
@@ -79,7 +88,24 @@ const Home = () => {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setBatteryPercentage(data.battery);
+        const voltage = data.battery;
+
+        // Define voltage range
+        const minVoltage = 3.3;
+        const maxVoltage = 4.02;
+
+        // Calculate battery percentage
+        let batteryPercentage;
+        if (voltage <= minVoltage) {
+          batteryPercentage = 0; // Battery is 0% if voltage is below 3.3V
+        } else if (voltage >= maxVoltage) {
+          batteryPercentage = 100; // Battery is 100% if voltage is above 4.02V
+        } else {
+          batteryPercentage =
+            ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100;
+        }
+
+        setBatteryPercentage(Math.round(batteryPercentage).toString()); // Set battery percentage as integer
       }
     } catch (error) {
       // Alert.alert("Error", "Unable to fetch battery percentage.");
@@ -106,7 +132,7 @@ const Home = () => {
   const verifyHomeWifiConnection = useCallback(async (ipAddress: string) => {
     try {
       const currentSSID = await WifiManager.getCurrentWifiSSID();
-      const storedSSID = await AsyncStorage.getItem("homeWifiSSID");
+      const storedSSID = await AsyncStorage.getItem("WifiSSID");
       const response = await fetch(`http://${ipAddress}/ping`);
 
       if (currentSSID === storedSSID && response.ok) {
@@ -116,10 +142,10 @@ const Home = () => {
         Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
       }
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        "Connection Lost.\n" + "Check Home Wi-Fi connection."
-      );
+      // Alert.alert(
+      //   "Error",
+      //   "Connection Lost.\n" + "Check Home Wi-Fi connection."
+      // );
       setConnected(false);
       console.error("Error verifying Home Wi-Fi connection:", error);
     }
@@ -129,19 +155,27 @@ const Home = () => {
     const url = `http://${esp32IpAddress}/${
       doorState === "closed" ? "open" : "close"
     }`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
+      console.log("Toggling door lock...");
       setLoading(true);
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: controller.signal });
+      console.log("Door lock response:", response);
       if (response.ok) {
-        setDoorState(doorState === "closed" ? "open" : "closed");
         const newDoorState = doorState === "closed" ? "open" : "closed";
         setDoorState(newDoorState);
         await AsyncStorage.setItem("door_state", newDoorState);
       }
-    } catch (error) {
-      Alert.alert("Error", "Unable to toggle door lock.");
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        // Alert.alert("Error", "Request timed out. Unable to toggle door lock.");
+      } else {
+        Alert.alert("Error", "Unable to toggle door lock.");
+      }
       console.error("Error toggling door lock:", error);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -172,20 +206,37 @@ const Home = () => {
 
       // Send the reset command with a timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 10 seconds timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
 
-      await fetch(resetUrl, { signal: controller.signal });
+      const resetResponse = await fetch(resetUrl, {
+        signal: controller.signal,
+      });
       clearTimeout(timeoutId);
 
-      // Assuming success since ESP32 won't send a response back
-      Alert.alert("Success", "ESP32 has been reset.");
+      if (resetResponse.ok) {
+        const responseText = await resetResponse.text();
+        if (responseText === "Successfully Reset") {
+          Alert.alert("Success", "ESP32 has been reset.");
+          await AsyncStorage.removeItem("esp32IpAddress");
+          await AsyncStorage.removeItem("WifiSSID");
+          setConnected(false);
+          setBatteryPercentage("");
+        }
+      } else {
+        Alert.alert("Error", "Failed to reset ESP32.");
+      }
     } catch (error: any) {
       // Assuming success if there is a network error or timeout
       if (
         error.name === "AbortError" ||
         error.message.includes("Network request failed")
       ) {
+        Alert.alert("Success", "ESP32 has been reset.");
         console.log("ESP32 has been reset.");
+        await AsyncStorage.removeItem("esp32IpAddress");
+        await AsyncStorage.removeItem("WifiSSID");
+        setConnected(false);
+        setBatteryPercentage("");
       } else {
         Alert.alert("Error", "Unable to reset ESP32.");
         console.error("Error resetting ESP32:", error);
@@ -193,23 +244,8 @@ const Home = () => {
     } finally {
       setLoading(false);
       // Reset the animation values to ensure the Wi-Fi connect button returns to its original position
-      Animated.parallel([
-        Animated.timing(resetAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(wifiAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setResetVisible(false);
-        setConnected(false);
-      });
+      resetConnectButton();
     }
-    setBatteryPercentage("");
   };
 
   const toggleResetButton = () => {
@@ -243,15 +279,30 @@ const Home = () => {
     }
   };
 
+  const resetConnectButton = () => {
+    Animated.parallel([
+      Animated.timing(resetAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(wifiAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setResetVisible(false));
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
         colors={["#3E5C76", "#74ACDC"]}
         style={styles.background}
       />
-      <Text style={styles.head}>Welcome Back</Text>
+      <Text style={styles.head}>Welcome to ZenLock</Text>
       <Text style={styles.subhead}>
-        Your door automation companion is ready to assist you.
+        Your Gateway to a Smarter, Safer, and Seamless Home Experience.
       </Text>
 
       <View style={styles.centerContainer}>
@@ -409,13 +460,13 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   centerContainer: {
-    bottom: RFValue(90),
-    height: RFValue(50),
+    bottom: height * 0.13,
+    height: height * 0.7,
     flex: 1,
   },
   outerCircle: {
     alignItems: "center",
-    top: RFValue(130),
+    top: height * 0.2,
     shadowOffset: {
       width: 5,
       height: 15,
@@ -426,8 +477,8 @@ const styles = StyleSheet.create({
     elevation: 20,
     // borderWidth: 1,
     borderRadius: 110,
-    width: 280,
-    height: 280,
+    width: width * 0.8,
+    height: width * 0.8,
     backgroundColor: "#fff",
   },
   led: {
@@ -438,20 +489,22 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   head: {
-    marginTop: 70,
+    marginTop: height * 0.1,
     textAlign: "center",
     fontSize: RFValue(30),
     fontFamily: "Poppins-SemiBold",
     height: RFValue(40),
+    marginBottom: RFValue(3),
     color: "#fff",
   },
   subhead: {
     textAlign: "center",
-    fontSize: RFValue(14),
+    fontSize: RFValue(13),
     fontFamily: "Poppins-Reg",
     marginLeft: RFValue(20),
     marginRight: RFValue(20),
     color: "#fff",
+    lineHeight: RFValue(15),
   },
   connectBtn: {
     borderRadius: 50,
@@ -460,7 +513,7 @@ const styles = StyleSheet.create({
     height: RFValue(50),
     alignItems: "center",
     justifyContent: "center",
-    bottom: RFValue(100),
+    bottom: height * 0.13,
     shadowOffset: {
       width: 5,
       height: 15,
@@ -478,7 +531,7 @@ const styles = StyleSheet.create({
     height: RFValue(50),
     alignItems: "center",
     justifyContent: "center",
-    bottom: RFValue(180),
+    bottom: height * 0.25,
     shadowOffset: {
       width: 5,
       height: 15,
@@ -500,8 +553,8 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     backgroundColor: "#fff",
-    width: RFValue(300),
-    height: RFValue(80),
+    width: width * 0.9,
+    height: height * 0.12,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: RFValue(20),
