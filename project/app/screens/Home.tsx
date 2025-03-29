@@ -4,6 +4,7 @@ import {
   BackHandler,
   Dimensions,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -40,6 +41,44 @@ const Home = () => {
   const [resetVisible, setResetVisible] = useState(false);
   const resetAnim = useRef(new Animated.Value(0)).current;
   const wifiAnim = useRef(new Animated.Value(0)).current;
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const carouselItems = [
+    {
+      id: "1",
+      content: (
+        <>
+          <Text
+            style={[styles.statusText, { color: connected ? "green" : "red" }]}
+          >
+            {connected ? "Connected" : "Not Connected"}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <BatteryIcon />
+            <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
+          </View>
+        </>
+      ),
+    },
+    ...(!connected
+      ? [
+          {
+            id: "2",
+            content: (
+              <View style={styles.statusItem}>
+                <TouchableOpacity
+                  style={{ justifyContent: "center" }}
+                  onPress={() => {
+                    calibrateDoor();
+                  }}
+                >
+                  <Text style={styles.statusText}>Calibrate Door</Text>
+                </TouchableOpacity>
+              </View>
+            ),
+          },
+        ]
+      : []),
+  ];
 
   useEffect(() => {
     const initialize = async () => {
@@ -156,7 +195,7 @@ const Home = () => {
       doorState === "closed" ? "open" : "close"
     }`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
     try {
       console.log("Toggling door lock...");
       setLoading(true);
@@ -294,6 +333,11 @@ const Home = () => {
     ]).start(() => setResetVisible(false));
   };
 
+  const calibrateDoor = () => {
+    console.log("Calibrating door...");
+    setIsCalibrating(true);
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -401,17 +445,36 @@ const Home = () => {
         </Animated.View>
       )}
 
-      <View style={styles.statusContainer}>
-        <Text
-          style={[styles.statusText, { color: connected ? "green" : "red" }]}
-        >
-          {connected ? "Connected" : "Not Connected"}
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <BatteryIcon />
-          <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+        style={styles.scrollViewContainer}
+        snapToInterval={width * 0.9}
+        decelerationRate="fast"
+      >
+        <View style={styles.statusItem}>
+          <Text
+            style={[styles.statusText, { color: connected ? "green" : "red" }]}
+          >
+            {connected ? "Connected" : "Not Connected"}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <BatteryIcon />
+            <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
+          </View>
         </View>
-      </View>
+        {connected && (
+          <View style={styles.statusItem}>
+            <TouchableOpacity
+              style={{ justifyContent: "center" }}
+              onPress={calibrateDoor}
+            >
+              <Text style={styles.statusText}>Calibrate Door</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
 
       <Modal
         visible={showExitAlert}
@@ -475,7 +538,6 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowRadius: 10,
     elevation: 20,
-    // borderWidth: 1,
     borderRadius: 110,
     width: width * 0.8,
     height: width * 0.8,
@@ -522,8 +584,9 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowRadius: 10,
     elevation: 20,
+    top: RFValue(80),
+    zIndex: 2,
   },
-
   resetBtn: {
     borderRadius: 50,
     backgroundColor: "#fff",
@@ -550,15 +613,6 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: RFValue(32),
     fontFamily: "Poppins-Bold",
-  },
-  statusContainer: {
-    backgroundColor: "#fff",
-    width: width * 0.9,
-    height: height * 0.12,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: RFValue(20),
-    bottom: RFValue(50),
   },
   statusText: {
     fontFamily: "Poppins-Bold",
@@ -600,5 +654,34 @@ const styles = StyleSheet.create({
     fontSize: RFValue(16),
     color: "blue",
     fontFamily: "Poppins-Med",
+  },
+  statusItem: {
+    backgroundColor: "#fff",
+    padding: RFValue(10),
+    marginHorizontal: RFValue(5),
+    borderRadius: RFValue(10),
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: {
+      width: 2,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowColor: "#000",
+    shadowRadius: 5,
+    elevation: 5,
+    height: height * 0.11,
+    width: width * 0.9,
+  },
+  scrollViewContainer: {
+    width: width * 1,
+    marginBottom: RFValue(-100),
+  },
+  scrollViewContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: RFValue(10),
+    top: RFValue(-20),
+    alignContent: "center",
   },
 });

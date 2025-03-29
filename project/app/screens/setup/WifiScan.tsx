@@ -12,7 +12,7 @@ import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
 import * as Location from "expo-location";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
-import RedirectBox from "../../common/RedirectBox";
+import RedirectBox from "../../components/RedirectBox";
 import * as IntentLauncher from "expo-intent-launcher";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../types";
