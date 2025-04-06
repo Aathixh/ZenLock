@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -42,43 +43,8 @@ const Home = () => {
   const resetAnim = useRef(new Animated.Value(0)).current;
   const wifiAnim = useRef(new Animated.Value(0)).current;
   const [isCalibrating, setIsCalibrating] = useState(false);
-  const carouselItems = [
-    {
-      id: "1",
-      content: (
-        <>
-          <Text
-            style={[styles.statusText, { color: connected ? "green" : "red" }]}
-          >
-            {connected ? "Connected" : "Not Connected"}
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <BatteryIcon />
-            <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
-          </View>
-        </>
-      ),
-    },
-    ...(!connected
-      ? [
-          {
-            id: "2",
-            content: (
-              <View style={styles.statusItem}>
-                <TouchableOpacity
-                  style={{ justifyContent: "center" }}
-                  onPress={() => {
-                    calibrateDoor();
-                  }}
-                >
-                  <Text style={styles.statusText}>Calibrate Door</Text>
-                </TouchableOpacity>
-              </View>
-            ),
-          },
-        ]
-      : []),
-  ];
+  const [motorDelay, setMotorDelay] = useState("");
+  const [lockDelay, setLockDelay] = useState("");
 
   useEffect(() => {
     const initialize = async () => {
@@ -333,9 +299,40 @@ const Home = () => {
     ]).start(() => setResetVisible(false));
   };
 
-  const calibrateDoor = () => {
-    console.log("Calibrating door...");
-    setIsCalibrating(true);
+  const sendCalibrationData = async () => {
+    if (!esp32IpAddress) return;
+    const url = `http://${esp32IpAddress}/calibrate`;
+
+    if (!motorDelay || !lockDelay) {
+      Alert.alert("Error", "Please enter valid motor and lock delay values.");
+      return;
+    }
+    const data = new URLSearchParams({
+      motorDelay: motorDelay,
+      lockDelay: lockDelay,
+    }).toString();
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: data,
+      });
+
+      if (response.ok) {
+        Alert.alert("Success", "Calibration data sent successfully!");
+        setIsCalibrating(false); // Close the modal
+      } else {
+        const errorText = await response.text();
+        console.error("Error response:", response.status, errorText);
+        Alert.alert("Error", "Failed to send calibration data.");
+      }
+    } catch (error) {
+      console.error("Error sending calibration data:", error);
+      Alert.alert("Error", "Unable to send calibration data.");
+    }
   };
 
   return (
@@ -468,13 +465,62 @@ const Home = () => {
           <View style={styles.statusItem}>
             <TouchableOpacity
               style={{ justifyContent: "center" }}
-              onPress={calibrateDoor}
+              onPress={() => setIsCalibrating(true)}
             >
               <Text style={styles.statusText}>Calibrate Door</Text>
             </TouchableOpacity>
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={isCalibrating}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsCalibrating(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.calibrationModal}>
+            <Text style={styles.modalTitle}>Calibrate Door</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Motor Delay (ms)"
+              keyboardType="numeric"
+              value={motorDelay}
+              onChangeText={(text) => {
+                console.log("Motor Delay:", text); // Debugging
+                setMotorDelay(text);
+              }}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Lock Delay (ms)"
+              keyboardType="numeric"
+              value={lockDelay}
+              onChangeText={(text) => {
+                console.log("Lock Delay:", text); // Debugging
+                setLockDelay(text);
+              }}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setIsCalibrating(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={sendCalibrationData}
+              >
+                <Text style={styles.modalButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showExitAlert}
@@ -604,6 +650,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 20,
     position: "absolute",
+    zIndex: 5,
   },
   resetBtnText: {
     fontSize: RFValue(16),
@@ -683,5 +730,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: RFValue(10),
     top: RFValue(-20),
     alignContent: "center",
+  },
+
+  calibrationModal: {
+    width: "80%",
+    backgroundColor: "white",
+    padding: RFValue(20),
+    borderRadius: 10,
+    alignItems: "center",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  input: {
+    width: "100%",
+    height: RFValue(40),
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: RFValue(10),
+    marginBottom: RFValue(15),
+    fontSize: RFValue(14),
   },
 });
