@@ -1,5 +1,12 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text, View, Animated } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Animated,
+  TouchableOpacity,
+  Linking,
+} from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { RootStackParamList } from "../types";
 import { useFonts } from "expo-font";
@@ -58,6 +65,10 @@ export default function Splash() {
     return null; // or a loading spinner
   }
 
+  const openWebsite = () => {
+    Linking.openURL("https://www.linkedin.com/in/aathishrviswam"); // Replace with your website URL
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -83,6 +94,16 @@ export default function Splash() {
       </Animated.View>
       <Text style={styles.head}>ZenLock</Text>
       <Text style={styles.subHead}>Simplifying Security, Empowering Trust</Text>
+
+      <Text style={[styles.subHead, { marginTop: RFValue(130) }]}>
+        Developed By
+      </Text>
+      <TouchableOpacity
+        onPress={openWebsite}
+        style={{ marginTop: RFValue(10) }}
+      >
+        <Text style={styles.linkLabel}>Aathish R Viswam</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -118,5 +139,12 @@ const styles = StyleSheet.create({
     fontSize: RFValue(15),
     color: "white",
     top: RFValue(40),
+  },
+  linkLabel: {
+    fontFamily: "Poppins-Med",
+    fontSize: RFValue(14),
+    color: "white",
+    textDecorationLine: "underline",
+    marginTop: RFValue(20),
   },
 });

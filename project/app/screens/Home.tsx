@@ -28,6 +28,7 @@ import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoaderKit, { animations } from "react-native-loader-kit";
+import Slider from "@react-native-community/slider";
 
 const { width, height } = Dimensions.get("window");
 
@@ -327,11 +328,11 @@ const Home = () => {
       } else {
         const errorText = await response.text();
         console.error("Error response:", response.status, errorText);
-        Alert.alert("Error", "Failed to send calibration data.");
+        // Alert.alert("Error", "Failed to send calibration data.");
       }
     } catch (error) {
       console.error("Error sending calibration data:", error);
-      Alert.alert("Error", "Unable to send calibration data.");
+      // Alert.alert("Error", "Unable to send calibration data.");
     }
   };
 
@@ -343,7 +344,7 @@ const Home = () => {
       />
       <Text style={styles.head}>Welcome to ZenLock</Text>
       <Text style={styles.subhead}>
-        Your Gateway to a Smarter, Safer, and Seamless Home Experience.
+        Your Gateway to a Smarter, Safer and Seamless Home Experience.
       </Text>
 
       <View style={styles.centerContainer}>
@@ -483,25 +484,35 @@ const Home = () => {
           <View style={styles.calibrationModal}>
             <Text style={styles.modalTitle}>Calibrate Door</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Motor Delay (ms)"
-              keyboardType="numeric"
-              value={motorDelay}
-              onChangeText={(text) => {
-                console.log("Motor Delay:", text); // Debugging
-                setMotorDelay(text);
-              }}
+            <Text style={styles.sliderLabel}>
+              Motor Delay: {Number(motorDelay) / 1000} s
+            </Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={2000}
+              maximumValue={10000}
+              step={100}
+              // value={Number(motorDelay)}
+              onValueChange={(value) => setMotorDelay(value.toString())}
+              minimumTrackTintColor="#3E5C76"
+              maximumTrackTintColor="#ccc"
+              thumbTintColor="#3E5C76"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Lock Delay (ms)"
-              keyboardType="numeric"
-              value={lockDelay}
-              onChangeText={(text) => {
-                console.log("Lock Delay:", text); // Debugging
-                setLockDelay(text);
-              }}
+
+            {/* Lock Delay Slider */}
+            <Text style={styles.sliderLabel}>
+              Lock Delay: {Number(lockDelay) / 1000} s
+            </Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={100}
+              maximumValue={1000}
+              step={25}
+              // value={Number(lockDelay)}
+              onValueChange={(value) => setLockDelay(value.toString())}
+              minimumTrackTintColor="#3E5C76"
+              maximumTrackTintColor="#ccc"
+              thumbTintColor="#3E5C76"
             />
 
             <View style={styles.modalButtons}>
@@ -756,5 +767,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: RFValue(10),
     marginBottom: RFValue(15),
     fontSize: RFValue(14),
+  },
+
+  slider: {
+    width: "100%",
+    height: RFValue(40),
+    marginBottom: RFValue(15),
+  },
+
+  sliderLabel: {
+    fontSize: RFValue(14),
+    fontFamily: "Poppins-SemiBold",
+    marginBottom: RFValue(5),
+    color: "#000",
   },
 });
