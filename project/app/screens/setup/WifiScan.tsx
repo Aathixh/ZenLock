@@ -12,7 +12,7 @@ import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
 import * as Location from "expo-location";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
-import RedirectBox from "../../common/RedirectBox";
+import RedirectBox from "../../components/RedirectBox";
 import * as IntentLauncher from "expo-intent-launcher";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../types";
@@ -105,7 +105,7 @@ const WifiScan = () => {
         const ipAddress = responseText.split("IP: ")[1];
         const ssid = selectedWifi;
         await AsyncStorage.setItem("esp32IpAddress", ipAddress);
-        await AsyncStorage.setItem("homeWifiSSID", ssid);
+        await AsyncStorage.setItem("WifiSSID", ssid);
         setEsp32IpAddress(ipAddress);
         Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
         setCredentialsSent(true);
@@ -129,9 +129,20 @@ const WifiScan = () => {
       Alert.alert("Connected", "Successfully connected to Home Wi-Fi.", [
         {
           text: "OK",
-          onPress: () => navigation.navigate("Home", { connected: true }),
+          onPress: () => navigation.navigate("Home"),
         },
       ]);
+    }
+  };
+
+  const handleContinueWithHotspot = async () => {
+    const currentSSID = await WifiManager.getCurrentWifiSSID();
+    if (currentSSID === "DoorLock") {
+      await AsyncStorage.setItem("WifiSSID", currentSSID);
+      await AsyncStorage.setItem("esp32IpAddress", "192.168.4.1");
+      navigation.navigate("Home");
+    } else {
+      Alert.alert("Error", "Please connect to DoorLock Wi-Fi.");
     }
   };
 
@@ -141,7 +152,7 @@ const WifiScan = () => {
         colors={["#3E5C76", "#74ACDC"]}
         style={styles.background}
       />
-      <Text style={styles.head}>Setup DoorLock</Text>
+      <Text style={styles.head}>Setup ZenLock</Text>
       {!connectedToDoorLock && (
         <RedirectBox
           title="Please Connect to DoorLock Wifi Hotspot"
@@ -179,6 +190,15 @@ const WifiScan = () => {
             </TouchableOpacity>
           )}
         />
+      </View>
+
+      <View>
+        <TouchableOpacity
+          style={styles.continueBtn}
+          onPress={handleContinueWithHotspot}
+        >
+          <Text style={styles.continueText}>Continue with Hotspot</Text>
+        </TouchableOpacity>
       </View>
 
       {selectedWifi && !credentialsSent && (
@@ -238,7 +258,7 @@ const styles = StyleSheet.create({
   },
   wifiList: {
     marginTop: RFPercentage(2),
-    maxHeight: RFPercentage(35),
+    maxHeight: RFPercentage(65),
     backgroundColor: "rgba(255, 255, 255, 0.27)",
     borderRadius: RFValue(10),
   },
@@ -256,5 +276,28 @@ const styles = StyleSheet.create({
     borderRadius: RFValue(10),
     padding: RFValue(10),
     marginTop: RFPercentage(2),
+  },
+  continueBtn: {
+    borderRadius: 15,
+    backgroundColor: "#fff",
+    width: RFValue(180),
+    height: RFValue(50),
+    alignItems: "center",
+    justifyContent: "center",
+    top: RFValue(50),
+    shadowOffset: {
+      width: 5,
+      height: 15,
+    },
+    shadowOpacity: 0.9,
+    shadowColor: "#000",
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  continueText: {
+    fontFamily: "Poppins-Med",
+    fontSize: RFValue(14),
+    textAlign: "center",
+    color: "green",
   },
 });
