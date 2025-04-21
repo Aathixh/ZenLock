@@ -97,8 +97,8 @@ const Home = () => {
         const voltage = data.battery;
 
         // Define voltage range
-        const minVoltage = 3.3;
-        const maxVoltage = 4.02;
+        const minVoltage = 3.7;
+        const maxVoltage = 4.2;
 
         // Calculate battery percentage
         let batteryPercentage;
@@ -162,7 +162,7 @@ const Home = () => {
       doorState === "closed" ? "open" : "close"
     }`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 61000); // 62 seconds timeout
     try {
       console.log("Toggling door lock...");
       setLoading(true);
@@ -490,7 +490,7 @@ const Home = () => {
             <Slider
               style={styles.slider}
               minimumValue={2000}
-              maximumValue={10000}
+              maximumValue={60000}
               step={100}
               // value={Number(motorDelay)}
               onValueChange={(value) => setMotorDelay(value.toString())}
@@ -506,7 +506,7 @@ const Home = () => {
             <Slider
               style={styles.slider}
               minimumValue={100}
-              maximumValue={1000}
+              maximumValue={3000}
               step={25}
               // value={Number(lockDelay)}
               onValueChange={(value) => setLockDelay(value.toString())}
