@@ -155,7 +155,7 @@ const WifiScan = () => {
       <Text style={styles.head}>Setup ZenLock</Text>
       {!connectedToDoorLock && (
         <RedirectBox
-          title="Please Connect to DoorLock Wifi Hotspot"
+          title="Please Connect to DoorLock Hotspot"
           ssid="DoorLock"
           BtnTitle="Connect"
           inputfield={false}
