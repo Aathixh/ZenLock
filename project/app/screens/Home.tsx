@@ -29,6 +29,7 @@ import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoaderKit, { animations } from "react-native-loader-kit";
 import Slider from "@react-native-community/slider";
+import { discoverESP32 } from "../services/zeroconfService";
 
 const { width, height } = Dimensions.get("window");
 
@@ -97,7 +98,7 @@ const Home = () => {
         const voltage = data.battery;
 
         // Define voltage range
-        const minVoltage = 3.7;
+        const minVoltage = 3.0;
         const maxVoltage = 4.2;
 
         // Calculate battery percentage
@@ -128,7 +129,21 @@ const Home = () => {
   };
 
   const checkStoredIpAddress = async () => {
-    const storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
+    let storedIpAddress;
+    try {
+      storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
+      console.log("Stored IP Address:", storedIpAddress);
+      if (!storedIpAddress) {
+        const discoveredIp = await discoverESP32();
+        if (typeof discoveredIp === "string") {
+          setEsp32IpAddress(discoveredIp);
+        }
+      } else {
+        setEsp32IpAddress(storedIpAddress);
+      }
+    } catch (error) {
+      console.error("Error during initialization:", error);
+    }
     if (storedIpAddress) {
       setEsp32IpAddress(storedIpAddress);
       verifyHomeWifiConnection(storedIpAddress);
@@ -162,7 +177,7 @@ const Home = () => {
       doorState === "closed" ? "open" : "close"
     }`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 61000); // 62 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     try {
       console.log("Toggling door lock...");
       setLoading(true);
