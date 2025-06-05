@@ -113,6 +113,7 @@ const Home = () => {
         }
 
         setBatteryPercentage(Math.round(batteryPercentage).toString()); // Set battery percentage as integer
+        console.log("Battery percentage:", batteryPercentage);
       }
     } catch (error) {
       // Alert.alert("Error", "Unable to fetch battery percentage.");
@@ -156,17 +157,23 @@ const Home = () => {
       const storedSSID = await AsyncStorage.getItem("WifiSSID");
       const response = await fetch(`http://${ipAddress}/ping`);
 
-      if (currentSSID === storedSSID && response.ok) {
-        setConnected(true);
+      // if (currentSSID === storedSSID && response.ok) {
+      //   setConnected(true);
+      // } else {
+      //   setConnected(false);
+      //   Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
+      // }
+      if (currentSSID !== storedSSID || !response.ok) {
+        const discoveredIp = await discoverESP32();
+        if (typeof discoveredIp === "string") {
+          setEsp32IpAddress(discoveredIp);
+          verifyHomeWifiConnection(discoveredIp);
+        }
       } else {
-        setConnected(false);
-        Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
+        setConnected(true);
+        console.log("Home Wi-Fi connection verified.");
       }
     } catch (error: any) {
-      // Alert.alert(
-      //   "Error",
-      //   "Connection Lost.\n" + "Check Home Wi-Fi connection."
-      // );
       setConnected(false);
       console.error("Error verifying Home Wi-Fi connection:", error);
     }

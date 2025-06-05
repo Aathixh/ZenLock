@@ -103,14 +103,9 @@ const WifiScan = () => {
       const responseText = await response.text();
       console.log(response);
       if (response.ok) {
-        let ipAddress: string | null = null;
-        while (ipAddress === null || ipAddress === "192.168.4.1") {
-          ipAddress = (await discoverESP32()) as string;
-        }
-        setEsp32IpAddress(ipAddress);
-        Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
         const ssid = selectedWifi;
         await AsyncStorage.setItem("WifiSSID", ssid);
+        Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
         setCredentialsSent(true);
       } else {
         Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
@@ -127,8 +122,14 @@ const WifiScan = () => {
     await IntentLauncher.startActivityAsync(
       IntentLauncher.ActivityAction.WIFI_SETTINGS
     );
+    setLoading(true);
     const currentSSID = await WifiManager.getCurrentWifiSSID();
     if (currentSSID === selectedWifi) {
+      let ipAddress: string | null = null;
+      while (ipAddress === null || ipAddress === "192.168.4.1") {
+        ipAddress = (await discoverESP32()) as string;
+      }
+      setEsp32IpAddress(ipAddress);
       Alert.alert("Connected", "Successfully connected to Home Wi-Fi.", [
         {
           text: "OK",
@@ -136,6 +137,7 @@ const WifiScan = () => {
         },
       ]);
     }
+    setLoading(false);
   };
 
   const handleContinueWithHotspot = async () => {
@@ -214,6 +216,7 @@ const WifiScan = () => {
           cancelBtn={true}
           cancelFn={() => setSelectedWifi("")}
           loading={loading}
+          loadingText="Sending Credentials..."
         />
       )}
 
@@ -225,6 +228,8 @@ const WifiScan = () => {
           inputfield={false}
           connectFn={connectToHomeWifi}
           cancelBtn={false}
+          loading={loading}
+          loadingText="Connecting..."
         />
       )}
     </View>
