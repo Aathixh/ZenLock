@@ -87,9 +87,11 @@ const WifiScan = () => {
   };
 
   const handleConnect = async (password: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
     try {
       setLoading(true);
-      const response = await fetch("http://192.168.4.1/setup", {
+      const response = await fetch("https://192.168.4.1/setup", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -98,7 +100,10 @@ const WifiScan = () => {
           ssid: selectedWifi,
           password: password,
         }).toString(),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId); // Clear the timeout if request completes in time
+
       const responseText = await response.text();
       console.log(response);
       if (response.ok) {
@@ -112,9 +117,13 @@ const WifiScan = () => {
       } else {
         Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
       }
-    } catch (error) {
-      Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
-      console.error("Error sending Wi-Fi credentials to ESP32:", error);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") {
+        Alert.alert("Error", "Request timed out.");
+      } else {
+        Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
+        console.error("Error sending Wi-Fi credentials to ESP32:", error);
+      }
     } finally {
       setLoading(false);
     }

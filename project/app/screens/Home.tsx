@@ -14,6 +14,7 @@ import {
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
+import LottieView from "lottie-react-native";
 import Lock from "../../assets/Lock";
 import PadLock from "../../assets/PadLock";
 import WifiIcon from "../../assets/WifiIcon";
@@ -27,7 +28,6 @@ import {
 import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import LoaderKit, { animations } from "react-native-loader-kit";
 import Slider from "@react-native-community/slider";
 
 const { width, height } = Dimensions.get("window");
@@ -60,7 +60,7 @@ const Home = () => {
       checkStoredIpAddress();
       checkStoredDoorState();
       fetchBatteryPercentage();
-    }, 60000); // Check every 60 seconds
+    }, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval); // Cleanup on unmount
   }, [esp32IpAddress]);
@@ -89,15 +89,15 @@ const Home = () => {
 
   const fetchBatteryPercentage = async () => {
     if (!esp32IpAddress) return;
-    const url = `http://${esp32IpAddress}/battery`;
+    const url = `https://${esp32IpAddress}/battery`;
     try {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         const voltage = data.battery;
-
+        // console.log("Battery voltage:", voltage);
         // Define voltage range
-        const minVoltage = 3.7;
+        const minVoltage = 3.3;
         const maxVoltage = 4.2;
 
         // Calculate battery percentage
@@ -139,7 +139,7 @@ const Home = () => {
     try {
       const currentSSID = await WifiManager.getCurrentWifiSSID();
       const storedSSID = await AsyncStorage.getItem("WifiSSID");
-      const response = await fetch(`http://${ipAddress}/ping`);
+      const response = await fetch(`https://${ipAddress}/ping`);
 
       if (currentSSID === storedSSID && response.ok) {
         setConnected(true);
@@ -158,7 +158,7 @@ const Home = () => {
   }, []);
 
   const toggleDoorLock = async () => {
-    const url = `http://${esp32IpAddress}/${
+    const url = `https://${esp32IpAddress}/${
       doorState === "closed" ? "open" : "close"
     }`;
     const controller = new AbortController();
@@ -197,8 +197,8 @@ const Home = () => {
 
   const resetESP32 = async () => {
     if (!esp32IpAddress) return;
-    const pingUrl = `http://${esp32IpAddress}/ping`;
-    const resetUrl = `http://${esp32IpAddress}/reset`;
+    const pingUrl = `https://${esp32IpAddress}/ping`;
+    const resetUrl = `https://${esp32IpAddress}/reset`;
 
     try {
       setLoading(true);
@@ -302,7 +302,7 @@ const Home = () => {
 
   const sendCalibrationData = async () => {
     if (!esp32IpAddress) return;
-    const url = `http://${esp32IpAddress}/calibrate`;
+    const url = `https://${esp32IpAddress}/calibrate`;
 
     if (!motorDelay || !lockDelay) {
       Alert.alert("Error", "Please enter valid motor and lock delay values.");
@@ -364,18 +364,16 @@ const Home = () => {
             </Text>
           )}
           {loading && (
-            <LoaderKit
+            <LottieView
               style={{
-                width: RFValue(70),
-                height: RFValue(70),
-                marginTop: RFValue(92),
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 0,
+                width: RFValue(150),
+                height: RFValue(150),
+                marginTop: RFValue(50),
               }}
-              name={animations[7]}
-              color="black"
+              resizeMode="contain"
+              source={require("../../assets/loaderAnim.json")}
+              autoPlay
+              loop
             />
           )}
 

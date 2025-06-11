@@ -2,7 +2,8 @@
 
 # dependencies
 node_modules/
-/android
+android/
+ios/
 
 # Expo
 .expo/
@@ -75,5 +76,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Certificates
+certs/*
 
 # @end expo-cli
