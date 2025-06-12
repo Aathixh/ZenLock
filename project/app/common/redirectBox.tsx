@@ -19,6 +19,7 @@ interface RedirectBoxProps {
   cancelBtn: boolean;
   cancelFn?: () => void;
   loading?: boolean;
+  loadingText?: string;
 }
 const RedirectBox: React.FC<RedirectBoxProps> = ({
   title,
@@ -29,6 +30,7 @@ const RedirectBox: React.FC<RedirectBoxProps> = ({
   cancelBtn,
   cancelFn,
   loading,
+  loadingText,
 }) => {
   const [password, setPassword] = useState("");
   return (
@@ -65,7 +67,7 @@ const RedirectBox: React.FC<RedirectBoxProps> = ({
         ) : (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#0000ff" />
-            <Text style={styles.loadingText}>Sending credentials...</Text>
+            <Text style={styles.loadingText}>{loadingText}</Text>
           </View>
         )}
       </View>

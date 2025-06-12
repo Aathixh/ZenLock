@@ -27,8 +27,9 @@ import {
 import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import LoaderKit, { animations } from "react-native-loader-kit";
 import Slider from "@react-native-community/slider";
+import LottieView from "lottie-react-native";
+import * as Location from "expo-location";
 
 const { width, height } = Dimensions.get("window");
 
@@ -46,24 +47,46 @@ const Home = () => {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [motorDelay, setMotorDelay] = useState("");
   const [lockDelay, setLockDelay] = useState("");
+  const [locationPermission, setLocationPermission] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
+      await requestLocationPermission();
       await checkStoredIpAddress();
-      await checkStoredDoorState();
-      await fetchBatteryPercentage();
     };
-
     initialize();
-
-    const interval = setInterval(() => {
-      checkStoredIpAddress();
-      checkStoredDoorState();
-      fetchBatteryPercentage();
-    }, 60000); // Check every 60 seconds
-
-    return () => clearInterval(interval); // Cleanup on unmount
   }, [esp32IpAddress]);
+
+  useEffect(() => {
+    // This effect runs when esp32IpAddress state is set/changed, or when 'connected' changes
+    if (esp32IpAddress && connected) {
+      fetchBatteryPercentage(); // Fetch initial battery percentage
+
+      const intervalId = setInterval(() => {
+        verifyHomeWifiConnection(esp32IpAddress); // Re-verify connection
+        if (connected) {
+          // Only fetch if still connected
+          checkStoredDoorState(); // Not dependent on IP but good to keep in sync
+          fetchBatteryPercentage();
+        }
+      }, 60000); // Check every 60 seconds
+      return () => clearInterval(intervalId);
+    }
+  }, [esp32IpAddress, connected]);
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        setLocationPermission(true);
+      } else {
+        Alert.alert("Permission Denied", "Location permission is required.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Unable to request location permission.");
+      console.error("Error requesting location permission:", error);
+    }
+  };
 
   useEffect(() => {
     if (!connected) {
@@ -88,7 +111,7 @@ const Home = () => {
   );
 
   const fetchBatteryPercentage = async () => {
-    if (!esp32IpAddress) return;
+    if (!esp32IpAddress || connected) return;
     const url = `http://${esp32IpAddress}/battery`;
     try {
       const response = await fetch(url);
@@ -121,57 +144,131 @@ const Home = () => {
   };
 
   const checkStoredDoorState = async () => {
-    const storedDoorState = await AsyncStorage.getItem("door_state");
-    if (storedDoorState) {
-      setDoorState(storedDoorState);
+    // const storedDoorState = await AsyncStorage.getItem("door_state");
+    // if (storedDoorState) {
+    //   setDoorState(storedDoorState);
+    // }
+    if (!esp32IpAddress || !connected) return; //
+    const url = `http://${esp32IpAddress}/doorState`;
+    try {
+      console.log(`Checking door state at ${url}`);
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Door state response:", data);
+        const state = data.state;
+        console.log(`Door state fetched: ${state}`);
+        setDoorState(state);
+        await AsyncStorage.setItem("doorState", state);
+      }
+    } catch (error) {
+      console.error("Error fetching door state:", error);
+      // Alert.alert("Error", "Unable to fetch door state.");
     }
   };
 
   const checkStoredIpAddress = async () => {
+    // let storedIpAddress;
+    // try {
+    //   storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
+    //   console.log("Stored IP Address:", storedIpAddress);
+    //   if (!storedIpAddress) {
+    //     const discoveredIp = await discoverESP32();
+    //     if (typeof discoveredIp === "string") {
+    //       setEsp32IpAddress(discoveredIp);
+    //     }
+    //   } else {
+    //     setEsp32IpAddress(storedIpAddress);
+    //   }
+    // } catch (error) {
+    //   console.error("Error during initialization:", error);
+    // }
+    // if (storedIpAddress) {
+    //   setEsp32IpAddress(storedIpAddress);
+    //   verifyHomeWifiConnection(storedIpAddress);
+    // }
     const storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
+    console.log("Stored IP Address/Hostname:", storedIpAddress);
     if (storedIpAddress) {
       setEsp32IpAddress(storedIpAddress);
       verifyHomeWifiConnection(storedIpAddress);
+    } else {
+      console.log("ESP32 IP address not found in storage");
     }
   };
 
-  const verifyHomeWifiConnection = useCallback(async (ipAddress: string) => {
-    try {
-      const currentSSID = await WifiManager.getCurrentWifiSSID();
-      const storedSSID = await AsyncStorage.getItem("WifiSSID");
-      const response = await fetch(`http://${ipAddress}/ping`);
+  const verifyHomeWifiConnection = useCallback(
+    async (addressToPing: string) => {
+      console.log(`Verifying Home Wi-Fi connection for IP: ${addressToPing}`);
+      try {
+        const currentSSID = await WifiManager.getCurrentWifiSSID();
+        const storedSSID = await AsyncStorage.getItem("WifiSSID");
+        const response = await fetch(`http://${addressToPing}/ping`);
+        console.log(`Ping response for ${addressToPing}:`, response);
 
-      if (currentSSID === storedSSID && response.ok) {
-        setConnected(true);
-      } else {
+        // if (currentSSID === storedSSID && response.ok) {
+        //   setConnected(true);
+        // } else {
+        //   setConnected(false);
+        //   Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
+        // }
+        // if (currentSSID !== storedSSID && !response.ok) {
+        //   const discoveredIp = await discoverESP32();
+        //   if (typeof discoveredIp === "string") {
+        //     setEsp32IpAddress(discoveredIp);
+        //     verifyHomeWifiConnection(discoveredIp);
+        //   }
+        // } else {
+        //   setConnected(true);
+        //   console.log("Home Wi-Fi connection verified.");
+        // }
+        if (response.ok) {
+          if (addressToPing === "zenlock.local" && currentSSID === storedSSID) {
+            setConnected(true);
+            console.log("Home Wi-Fi connection verified via zenlock.local.");
+          } else if (
+            addressToPing === "192.168.4.1" &&
+            currentSSID === "DoorLock"
+          ) {
+            // Assuming "DoorLock" is AP SSID
+            setConnected(true);
+            console.log("ESP32 AP connection verified via 192.168.4.1.");
+          } else {
+            setConnected(false);
+            console.log(
+              `Connection check failed: address=${addressToPing}, currentSSID=${currentSSID}, storedSSID=${storedSSID}`
+            );
+          }
+        } else {
+          setConnected(false);
+        }
+      } catch (error: any) {
         setConnected(false);
-        Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
+        console.error(
+          `Error verifying Home Wi-Fi connection to ${addressToPing}:`,
+          error
+        );
       }
-    } catch (error: any) {
-      // Alert.alert(
-      //   "Error",
-      //   "Connection Lost.\n" + "Check Home Wi-Fi connection."
-      // );
-      setConnected(false);
-      console.error("Error verifying Home Wi-Fi connection:", error);
-    }
-  }, []);
+    },
+    []
+  );
 
   const toggleDoorLock = async () => {
     const url = `http://${esp32IpAddress}/${
       doorState === "closed" ? "open" : "close"
     }`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 61000); // 62 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     try {
       console.log("Toggling door lock...");
       setLoading(true);
       const response = await fetch(url, { signal: controller.signal });
       console.log("Door lock response:", response);
       if (response.ok) {
-        const newDoorState = doorState === "closed" ? "open" : "closed";
-        setDoorState(newDoorState);
-        await AsyncStorage.setItem("door_state", newDoorState);
+        // const newDoorState = doorState === "closed" ? "open" : "closed";
+        // setDoorState(newDoorState);
+        //await AsyncStorage.setItem("door_state", newDoorState);
+        checkStoredDoorState(); // Fetch the updated door state
       }
     } catch (error: any) {
       if (error.name === "AbortError") {
@@ -364,18 +461,16 @@ const Home = () => {
             </Text>
           )}
           {loading && (
-            <LoaderKit
+            <LottieView
               style={{
-                width: RFValue(70),
-                height: RFValue(70),
-                marginTop: RFValue(92),
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 0,
+                width: RFValue(150),
+                height: RFValue(150),
+                marginTop: RFValue(50),
               }}
-              name={animations[7]}
-              color="black"
+              resizeMode="contain"
+              source={require("../../assets/loaderAnim.json")}
+              autoPlay
+              loop
             />
           )}
 

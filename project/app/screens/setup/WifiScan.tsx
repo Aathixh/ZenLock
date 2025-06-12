@@ -21,7 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const WifiScan = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [networks, setNetworks] = useState<WifiEntry[]>([]);
-  const [locationPermission, setLocationPermission] = useState(false);
+
   const [connectedToDoorLock, setConnectedToDoorLock] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedWifi, setSelectedWifi] = useState("");
@@ -30,23 +30,8 @@ const WifiScan = () => {
   const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    requestLocationPermission();
+    scanWifiNetworks();
   }, []);
-
-  const requestLocationPermission = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === "granted") {
-        setLocationPermission(true);
-        scanWifiNetworks();
-      } else {
-        Alert.alert("Permission Denied", "Location permission is required.");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Unable to request location permission.");
-      console.error("Error requesting location permission:", error);
-    }
-  };
 
   const scanWifiNetworks = async () => {
     try {
@@ -102,11 +87,11 @@ const WifiScan = () => {
       const responseText = await response.text();
       console.log(response);
       if (response.ok) {
-        const ipAddress = responseText.split("IP: ")[1];
+        // const ipAddress = responseText.split("IP: ")[1];
         const ssid = selectedWifi;
-        await AsyncStorage.setItem("esp32IpAddress", ipAddress);
+        await AsyncStorage.setItem("esp32IpAddress", "zenlock.local");
         await AsyncStorage.setItem("WifiSSID", ssid);
-        setEsp32IpAddress(ipAddress);
+        // setEsp32IpAddress(ipAddress);
         Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
         setCredentialsSent(true);
       } else {
@@ -124,8 +109,14 @@ const WifiScan = () => {
     await IntentLauncher.startActivityAsync(
       IntentLauncher.ActivityAction.WIFI_SETTINGS
     );
+    setLoading(true);
     const currentSSID = await WifiManager.getCurrentWifiSSID();
     if (currentSSID === selectedWifi) {
+      // let ipAddress: string | null = null;
+      // while (ipAddress === null || ipAddress === "192.168.4.1") {
+      //   ipAddress = (await discoverESP32()) as string;
+      //   setEsp32IpAddress(ipAddress);
+      // }
       Alert.alert("Connected", "Successfully connected to Home Wi-Fi.", [
         {
           text: "OK",
@@ -133,6 +124,7 @@ const WifiScan = () => {
         },
       ]);
     }
+    setLoading(false);
   };
 
   const handleContinueWithHotspot = async () => {
@@ -211,6 +203,7 @@ const WifiScan = () => {
           cancelBtn={true}
           cancelFn={() => setSelectedWifi("")}
           loading={loading}
+          loadingText="Sending Credentials..."
         />
       )}
 
@@ -222,6 +215,8 @@ const WifiScan = () => {
           inputfield={false}
           connectFn={connectToHomeWifi}
           cancelBtn={false}
+          loading={loading}
+          loadingText="Connecting..."
         />
       )}
     </View>
