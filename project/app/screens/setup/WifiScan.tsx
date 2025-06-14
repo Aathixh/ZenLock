@@ -28,6 +28,7 @@ const WifiScan = () => {
   const [loading, setLoading] = useState(false);
   const [credentialsSent, setCredentialsSent] = useState(false);
   const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
+  const [adminRegistered, setAdminRegistered] = useState(false);
 
   useEffect(() => {
     scanWifiNetworks();
@@ -138,6 +139,52 @@ const WifiScan = () => {
     }
   };
 
+  // const generateID = () => {
+  //   // Combine timestamp and random for better uniqueness
+  //   const timestamp = Date.now() % 1000; // Last 3 digits of timestamp
+  //   const random = Math.floor(Math.random() * 1000); // Random 3 digits
+
+  //   const id = timestamp * 1000 + random;
+  //   return id.toString().padStart(6, "0");
+  // };
+
+  const handleAdminRegistration = async (name: string, ID: string) => {
+    if (!name) {
+      Alert.alert("Error", "Please enter your name.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const adminID = ID;
+      console.log("Generated Admin ID:", adminID);
+      const response = await fetch("http://192.168.4.1/registerAdmin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ id: adminID, name: name }).toString(),
+      });
+
+      if (response.ok) {
+        setAdminRegistered(true);
+        setLoading(false);
+        await AsyncStorage.setItem("isAdmin", "true");
+        await AsyncStorage.setItem("adminID", adminID);
+        await AsyncStorage.setItem("adminName", name);
+        Alert.alert("Success", "Admin registered successfully.");
+      } else {
+        setLoading(false);
+        setAdminRegistered(false);
+        Alert.alert("Error", "Failed to register admin.");
+      }
+    } catch (error) {
+      setLoading(false);
+      setAdminRegistered(false);
+      Alert.alert("Error", "Unable to register admin.");
+      console.error("Error registering admin:", error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -152,6 +199,19 @@ const WifiScan = () => {
           BtnTitle="Connect"
           inputfield={false}
           connectFn={openWifiSettings}
+          cancelBtn={false}
+        />
+      )}
+      {connectedToDoorLock && !adminRegistered && (
+        <RedirectBox
+          title="Admin Registration"
+          subTitle="Enter your name"
+          BtnTitle="Register"
+          inputfield={true}
+          inputfierldTitle="Name"
+          OptionalInput={true}
+          connectFn={handleAdminRegistration}
+          loading={loading} // set after adding function
           cancelBtn={false}
         />
       )}

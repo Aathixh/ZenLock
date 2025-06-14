@@ -48,11 +48,14 @@ const Home = () => {
   const [motorDelay, setMotorDelay] = useState("");
   const [lockDelay, setLockDelay] = useState("");
   const [locationPermission, setLocationPermission] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
       await requestLocationPermission();
       await checkStoredIpAddress();
+      await verifyAdminStatus();
+      await checkStoredDoorState();
     };
     initialize();
   }, [esp32IpAddress]);
@@ -69,10 +72,15 @@ const Home = () => {
           checkStoredDoorState(); // Not dependent on IP but good to keep in sync
           fetchBatteryPercentage();
         }
-      }, 60000); // Check every 60 seconds
+      }, 30000); // Check every 30 seconds
       return () => clearInterval(intervalId);
     }
   }, [esp32IpAddress, connected]);
+
+  const verifyAdminStatus = async () => {
+    const Admin = await AsyncStorage.getItem("isAdmin");
+    setIsAdmin(Admin === "true");
+  };
 
   const requestLocationPermission = async () => {
     try {
@@ -203,6 +211,8 @@ const Home = () => {
       try {
         const currentSSID = await WifiManager.getCurrentWifiSSID();
         const storedSSID = await AsyncStorage.getItem("WifiSSID");
+        console.log(`Current SSID: ${currentSSID}, Stored SSID: ${storedSSID}`);
+        console.log(`Pinging address: ${addressToPing}`);
         const response = await fetch(`http://${addressToPing}/ping`);
         console.log(`Ping response for ${addressToPing}:`, response);
 
@@ -264,12 +274,12 @@ const Home = () => {
       setLoading(true);
       const response = await fetch(url, { signal: controller.signal });
       console.log("Door lock response:", response);
-      if (response.ok) {
-        // const newDoorState = doorState === "closed" ? "open" : "closed";
-        // setDoorState(newDoorState);
-        //await AsyncStorage.setItem("door_state", newDoorState);
-        checkStoredDoorState(); // Fetch the updated door state
-      }
+      // if (response.ok) {
+      //   // const newDoorState = doorState === "closed" ? "open" : "closed";
+      //   // setDoorState(newDoorState);
+      //   //await AsyncStorage.setItem("door_state", newDoorState);
+      // }
+      checkStoredDoorState(); // Fetch the updated door state
     } catch (error: any) {
       if (error.name === "AbortError") {
         // Alert.alert("Error", "Request timed out. Unable to toggle door lock.");
@@ -279,6 +289,7 @@ const Home = () => {
       console.error("Error toggling door lock:", error);
     } finally {
       clearTimeout(timeoutId);
+      checkStoredDoorState();
       setLoading(false);
     }
   };
@@ -543,7 +554,7 @@ const Home = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollViewContent}
         style={styles.scrollViewContainer}
-        snapToInterval={width * 0.9}
+        snapToInterval={width * 0.92}
         decelerationRate="fast"
       >
         <View style={styles.statusItem}>
@@ -552,12 +563,24 @@ const Home = () => {
           >
             {connected ? "Connected" : "Not Connected"}
           </Text>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <BatteryIcon />
-            <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
-          </View>
+          {connected && (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <BatteryIcon />
+              <Text style={styles.batteryPercent}>{batteryPercentage} %</Text>
+            </View>
+          )}
         </View>
-        {connected && (
+        {isAdmin && connected && (
+          <View style={styles.statusItem}>
+            <TouchableOpacity
+              style={{ justifyContent: "center" }}
+              onPress={() => {}}
+            >
+              <Text style={styles.statusText}>User Management</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {isAdmin && connected && (
           <View style={styles.statusItem}>
             <TouchableOpacity
               style={{ justifyContent: "center" }}

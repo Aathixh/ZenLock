@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import HomeScreen from "./screens/Home";
 import { enableScreens } from "react-native-screens";
 import WifiScan from "./screens/setup/WifiScan";
+import UserManagement from "./screens/UserManagementScreen";
 enableScreens();
 const Stack = createStackNavigator();
 
@@ -28,7 +29,16 @@ export default function App() {
             component={HomeScreen}
             options={{ title: "Home Screen" }}
           />
-          <Stack.Screen name="WifiScan" component={WifiScan} />
+          <Stack.Screen
+            name="WifiScan"
+            component={WifiScan}
+            options={{ title: "Wi-Fi Scan" }}
+          />
+          <Stack.Screen
+            name="UserManagement"
+            component={UserManagement}
+            options={{ title: "User Management" }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </>

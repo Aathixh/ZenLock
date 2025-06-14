@@ -12,9 +12,12 @@ import { TextInput } from "react-native-gesture-handler";
 
 interface RedirectBoxProps {
   title: string;
-  ssid: string;
-  connectFn: (password: string) => void;
+  subTitle?: string; // subtitle or ssid at a time
+  ssid?: string;
+  connectFn: (password: string, id: string) => void;
   inputfield: boolean;
+  OptionalInput?: boolean; // if true, input field is optional
+  inputfierldTitle?: string;
   BtnTitle: string;
   cancelBtn: boolean;
   cancelFn?: () => void;
@@ -23,9 +26,12 @@ interface RedirectBoxProps {
 }
 const RedirectBox: React.FC<RedirectBoxProps> = ({
   title,
+  subTitle,
   ssid,
   connectFn,
   inputfield,
+  OptionalInput,
+  inputfierldTitle,
   BtnTitle,
   cancelBtn,
   cancelFn,
@@ -33,6 +39,7 @@ const RedirectBox: React.FC<RedirectBoxProps> = ({
   loadingText,
 }) => {
   const [password, setPassword] = useState("");
+  const [id, setId] = useState("");
   return (
     <>
       <BlurView
@@ -42,13 +49,25 @@ const RedirectBox: React.FC<RedirectBoxProps> = ({
       />
       <View style={styles.popUpContainer}>
         <Text style={styles.popupHead}>{title}</Text>
-        <Text style={styles.popupText}>SSID: {ssid}</Text>
+        {!subTitle ? (
+          <Text style={styles.popupText}>SSID: {ssid}</Text>
+        ) : (
+          <Text style={styles.popupText}>{subTitle}</Text>
+        )}
 
         {inputfield && (
           <TextInput
-            placeholder="Enter Password"
+            placeholder={inputfierldTitle || "Enter Password"}
             style={styles.input}
             onChangeText={setPassword}
+          />
+        )}
+        {OptionalInput && (
+          <TextInput
+            placeholder={"Enter 6 Digit Unique Identifier"}
+            style={styles.input}
+            onChangeText={setId}
+            keyboardType="numeric"
           />
         )}
         {!loading ? (
@@ -59,7 +78,7 @@ const RedirectBox: React.FC<RedirectBoxProps> = ({
               width: RFValue(200),
             }}
           >
-            <Button title={BtnTitle} onPress={() => connectFn(password)} />
+            <Button title={BtnTitle} onPress={() => connectFn(password, id)} />
             {cancelBtn && (
               <Button title="Cancel" onPress={cancelFn} color={"red"} />
             )}
@@ -83,7 +102,7 @@ const styles = StyleSheet.create({
     padding: RFValue(20),
     borderRadius: RFValue(10),
     width: RFValue(300),
-    height: RFValue(200),
+    // height: RFValue(200),
     alignItems: "center",
     elevation: RFValue(10),
     alignSelf: "center",
@@ -111,6 +130,7 @@ const styles = StyleSheet.create({
     borderRadius: RFValue(5),
     bottom: RFValue(12),
     padding: RFValue(5),
+    marginTop: RFValue(10),
   },
   loadingContainer: {
     alignItems: "center",
