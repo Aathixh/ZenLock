@@ -139,15 +139,6 @@ const WifiScan = () => {
     }
   };
 
-  // const generateID = () => {
-  //   // Combine timestamp and random for better uniqueness
-  //   const timestamp = Date.now() % 1000; // Last 3 digits of timestamp
-  //   const random = Math.floor(Math.random() * 1000); // Random 3 digits
-
-  //   const id = timestamp * 1000 + random;
-  //   return id.toString().padStart(6, "0");
-  // };
-
   const handleAdminRegistration = async (name: string, ID: string) => {
     if (!name) {
       Alert.alert("Error", "Please enter your name.");

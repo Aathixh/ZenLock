@@ -574,7 +574,9 @@ const Home = () => {
           <View style={styles.statusItem}>
             <TouchableOpacity
               style={{ justifyContent: "center" }}
-              onPress={() => {}}
+              onPress={() => {
+                navigation.navigate("UserManagement");
+              }}
             >
               <Text style={styles.statusText}>User Management</Text>
             </TouchableOpacity>
@@ -587,6 +589,16 @@ const Home = () => {
               onPress={() => setIsCalibrating(true)}
             >
               <Text style={styles.statusText}>Calibrate Door</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {!connected && (
+          <View style={styles.statusItem}>
+            <TouchableOpacity
+              style={{ justifyContent: "center" }}
+              onPress={() => {}}
+            >
+              <Text style={styles.statusText}>Request Access</Text>
             </TouchableOpacity>
           </View>
         )}

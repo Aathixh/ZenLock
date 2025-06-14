@@ -21,7 +21,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["react-native-wifi-reborn"],
+    "plugins": ["react-native-wifi-reborn", "expo-dev-client"],
     "owner": "aathixh",
     "extra": {
       "eas": {
