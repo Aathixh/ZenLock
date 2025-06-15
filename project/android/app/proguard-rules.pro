@@ -12,12 +12,3 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
--keep class com.facebook.react.** { *; }
--keep class com.facebook.react.modules.** { *; }
--keep class com.balthazargronon.react.zeroconf.** { *; }
--keep class javax.jmdns.** { *; }
--keepattributes *Annotation*
--keep class okhttp3.** { *; }
--keep class okio.** { *; }
--keep class javax.jmdns.** { *; }
--keepattributes *Annotation*

@@ -12,7 +12,7 @@ import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
 import * as Location from "expo-location";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
-import RedirectBox from "../../common/RedirectBox";
+import RedirectBox from "../../common/redirectBox";
 import * as IntentLauncher from "expo-intent-launcher";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../types";
@@ -29,9 +29,18 @@ const WifiScan = () => {
   const [credentialsSent, setCredentialsSent] = useState(false);
   const [esp32IpAddress, setEsp32IpAddress] = useState<string | null>(null);
   const [adminRegistered, setAdminRegistered] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     scanWifiNetworks();
+    const checkAdminStatus = async () => {
+      const adminStatus = await AsyncStorage.getItem("isAdmin");
+      setIsAdmin(adminStatus === "true");
+    };
+
+    if (!isAdmin) {
+      checkAdminStatus();
+    }
   }, []);
 
   const scanWifiNetworks = async () => {
@@ -148,7 +157,7 @@ const WifiScan = () => {
       setLoading(true);
       const adminID = ID;
       console.log("Generated Admin ID:", adminID);
-      const response = await fetch("http://192.168.4.1/registerAdmin", {
+      const response = await fetch("http://192.168.4.1/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -193,7 +202,7 @@ const WifiScan = () => {
           cancelBtn={false}
         />
       )}
-      {connectedToDoorLock && !adminRegistered && (
+      {!isAdmin && connectedToDoorLock && !adminRegistered && (
         <RedirectBox
           title="Admin Registration"
           subTitle="Enter your name"

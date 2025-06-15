@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -23,7 +23,8 @@ export default function Splash() {
     "Poppins-Bold": require("../../assets/fonts/Poppins-Bold.ttf"),
   });
 
-  const wiggleAnim = new Animated.Value(0);
+  // const wiggleAnim = new Animated.Value(0);
+  const wiggleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (loaded) {

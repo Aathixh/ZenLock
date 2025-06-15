@@ -54,32 +54,41 @@ const Home = () => {
     const initialize = async () => {
       await requestLocationPermission();
       await checkStoredIpAddress();
-      await verifyAdminStatus();
       await checkStoredDoorState();
+      await verifyAdminStatus();
     };
     initialize();
+
+    const intervalId = setInterval(async () => {
+      if (esp32IpAddress) {
+        await verifyHomeWifiConnection(esp32IpAddress);
+      }
+      await fetchBatteryPercentage();
+      await checkStoredDoorState();
+    }, 30000); // Check every 30 seconds
   }, [esp32IpAddress]);
 
-  useEffect(() => {
-    // This effect runs when esp32IpAddress state is set/changed, or when 'connected' changes
-    if (esp32IpAddress && connected) {
-      fetchBatteryPercentage(); // Fetch initial battery percentage
+  // useEffect(() => {
+  //   // This effect runs when esp32IpAddress state is set/changed, or when 'connected' changes
+  //   if (esp32IpAddress && connected) {
+  //     fetchBatteryPercentage(); // Fetch initial battery percentage
 
-      const intervalId = setInterval(() => {
-        verifyHomeWifiConnection(esp32IpAddress); // Re-verify connection
-        if (connected) {
-          // Only fetch if still connected
-          checkStoredDoorState(); // Not dependent on IP but good to keep in sync
-          fetchBatteryPercentage();
-        }
-      }, 30000); // Check every 30 seconds
-      return () => clearInterval(intervalId);
-    }
-  }, [esp32IpAddress, connected]);
+  //     const intervalId = setInterval(() => {
+  //       verifyHomeWifiConnection(esp32IpAddress); // Re-verify connection
+  //       if (connected) {
+  //         // Only fetch if still connected
+  //         checkStoredDoorState(); // Not dependent on IP but good to keep in sync
+  //         fetchBatteryPercentage();
+  //       }
+  //     }, 30000); // Check every 30 seconds
+  //     return () => clearInterval(intervalId);
+  //   }
+  // }, [esp32IpAddress, connected]);
 
   const verifyAdminStatus = async () => {
     const Admin = await AsyncStorage.getItem("isAdmin");
     setIsAdmin(Admin === "true");
+    console.log(`Admin status: ${Admin}`);
   };
 
   const requestLocationPermission = async () => {
@@ -119,6 +128,7 @@ const Home = () => {
   );
 
   const fetchBatteryPercentage = async () => {
+    console.log(`Fetching battery percentage for IP: ${esp32IpAddress}`);
     if (!esp32IpAddress || connected) return;
     const url = `http://${esp32IpAddress}/battery`;
     try {
@@ -176,25 +186,6 @@ const Home = () => {
   };
 
   const checkStoredIpAddress = async () => {
-    // let storedIpAddress;
-    // try {
-    //   storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
-    //   console.log("Stored IP Address:", storedIpAddress);
-    //   if (!storedIpAddress) {
-    //     const discoveredIp = await discoverESP32();
-    //     if (typeof discoveredIp === "string") {
-    //       setEsp32IpAddress(discoveredIp);
-    //     }
-    //   } else {
-    //     setEsp32IpAddress(storedIpAddress);
-    //   }
-    // } catch (error) {
-    //   console.error("Error during initialization:", error);
-    // }
-    // if (storedIpAddress) {
-    //   setEsp32IpAddress(storedIpAddress);
-    //   verifyHomeWifiConnection(storedIpAddress);
-    // }
     const storedIpAddress = await AsyncStorage.getItem("esp32IpAddress");
     console.log("Stored IP Address/Hostname:", storedIpAddress);
     if (storedIpAddress) {
@@ -333,6 +324,8 @@ const Home = () => {
           Alert.alert("Success", "ESP32 has been reset.");
           await AsyncStorage.removeItem("esp32IpAddress");
           await AsyncStorage.removeItem("WifiSSID");
+          await AsyncStorage.removeItem("users");
+          await AsyncStorage.removeItem("isAdmin");
           setConnected(false);
           setBatteryPercentage("");
         }
@@ -349,6 +342,8 @@ const Home = () => {
         console.log("ESP32 has been reset.");
         await AsyncStorage.removeItem("esp32IpAddress");
         await AsyncStorage.removeItem("WifiSSID");
+        await AsyncStorage.removeItem("users");
+        await AsyncStorage.removeItem("isAdmin");
         setConnected(false);
         setBatteryPercentage("");
       } else {

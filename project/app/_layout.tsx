@@ -16,7 +16,7 @@ export default function App() {
       <StatusBar style="light" />
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="UserManagement"
+          initialRouteName="Splash"
           screenOptions={{ headerShown: false }}
         >
           <Stack.Screen
