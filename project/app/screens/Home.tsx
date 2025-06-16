@@ -30,6 +30,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Slider from "@react-native-community/slider";
 import LottieView from "lottie-react-native";
 import * as Location from "expo-location";
+import { showToast } from "../common/ToastMessage";
 
 const { width, height } = Dimensions.get("window");
 
@@ -100,7 +101,8 @@ const Home = () => {
         Alert.alert("Permission Denied", "Location permission is required.");
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to request location permission.");
+      // Alert.alert("Error", "Unable to request location permission.");
+      showToast.error("Unable to request location permission.");
       console.error("Error requesting location permission:", error);
     }
   };
@@ -280,7 +282,8 @@ const Home = () => {
       if (error.name === "AbortError") {
         // Alert.alert("Error", "Request timed out. Unable to toggle door lock.");
       } else {
-        Alert.alert("Error", "Unable to toggle door lock.");
+        // Alert.alert("Error", "Unable to toggle door lock.");
+        showToast.error("Unable to toggle door lock.");
       }
       console.error("Error toggling door lock:", error);
     } finally {
@@ -310,7 +313,8 @@ const Home = () => {
       // Ping the ESP32 to check the connection
       const pingResponse = await fetch(pingUrl);
       if (!pingResponse.ok) {
-        Alert.alert("Error", "ESP32 is not connected.");
+        // Alert.alert("Error", "ESP32 is not connected.");
+        showToast.error("ESP32 is not connected.");
         return;
       }
 
@@ -335,7 +339,8 @@ const Home = () => {
           setBatteryPercentage("");
         }
       } else {
-        Alert.alert("Error", "Failed to reset ESP32.");
+        // Alert.alert("Error", "Failed to reset ESP32.");
+        showToast.error("Failed to reset ESP32.");
       }
     } catch (error: any) {
       // Assuming success if there is a network error or timeout
@@ -343,7 +348,8 @@ const Home = () => {
         error.name === "AbortError" ||
         error.message.includes("Network request failed")
       ) {
-        Alert.alert("Success", "ESP32 has been reset.");
+        // Alert.alert("Success", "ESP32 has been reset.");
+        showToast.success("ESP32 has been reset.");
         console.log("ESP32 has been reset.");
         await AsyncStorage.removeItem("esp32IpAddress");
         await AsyncStorage.removeItem("WifiSSID");
@@ -352,7 +358,8 @@ const Home = () => {
         setConnected(false);
         setBatteryPercentage("");
       } else {
-        Alert.alert("Error", "Unable to reset ESP32.");
+        // Alert.alert("Error", "Unable to reset ESP32.");
+        showToast.error("Unable to reset ESP32.");
         console.error("Error resetting ESP32:", error);
       }
     } finally {
@@ -413,7 +420,8 @@ const Home = () => {
     const url = `http://${esp32IpAddress}/calibrate`;
 
     if (!motorDelay || !lockDelay) {
-      Alert.alert("Error", "Please enter valid motor and lock delay values.");
+      // Alert.alert("Error", "Please enter valid motor and lock delay values.");
+      showToast.error("Please enter valid motor and lock delay values.");
       return;
     }
     const data = new URLSearchParams({
@@ -431,7 +439,8 @@ const Home = () => {
       });
 
       if (response.ok) {
-        Alert.alert("Success", "Calibration data sent successfully!");
+        // Alert.alert("Success", "Calibration data sent successfully!");
+        showToast.success("Calibration data sent successfully!");
         setIsCalibrating(false); // Close the modal
       } else {
         const errorText = await response.text();
@@ -521,9 +530,12 @@ const Home = () => {
               ? isAdmin
                 ? toggleResetButton
                 : () =>
-                    Alert.alert(
-                      "Access Denied",
-                      "Only administrators can reset the device."
+                    // Alert.alert(
+                    //   "Access Denied",
+                    //   "Only administrators can reset the device."
+                    // )
+                    showToast.error(
+                      "Access Denied\nOnly administrators can reset the device."
                     )
               : () => navigation.navigate("WifiScan")
           }

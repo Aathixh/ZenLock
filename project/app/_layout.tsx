@@ -8,6 +8,8 @@ import { enableScreens } from "react-native-screens";
 import WifiScan from "./screens/setup/WifiScan";
 import UserManagement from "./screens/UserManagementScreen";
 import RequestAccess from "./screens/RequestAccess";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "./common/ToastConfig";
 enableScreens();
 const Stack = createStackNavigator();
 
@@ -46,6 +48,7 @@ export default function App() {
             options={{ title: "Request Access" }}
           />
         </Stack.Navigator>
+        <Toast config={toastConfig} />
       </NavigationContainer>
     </>
   );

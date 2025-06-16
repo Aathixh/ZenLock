@@ -16,6 +16,7 @@ import * as IntentLauncher from "expo-intent-launcher";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { showToast } from "../../common/ToastMessage";
 
 const WifiScan = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -47,7 +48,8 @@ const WifiScan = () => {
       const wifiList = await WifiManager.loadWifiList();
       setNetworks(wifiList);
     } catch (error: any) {
-      Alert.alert(error?.name, error?.message);
+      // Alert.alert(error?.name, error?.message);
+      showToast.error(`${error?.name}: ${error?.message}`);
       console.error("Error scanning Wi-Fi networks:", error);
     }
   };
@@ -64,12 +66,15 @@ const WifiScan = () => {
       const currentSSID = await WifiManager.getCurrentWifiSSID();
       if (currentSSID === "DoorLock") {
         setConnectedToDoorLock(true);
-        Alert.alert("Connected", "Successfully connected to DoorLock Wi-Fi.");
+        // Alert.alert("Connected", "Successfully connected to DoorLock Wi-Fi.");
+        showToast.success("Connected to DoorLock Wi-Fi");
       } else {
-        Alert.alert("Not Connected", "Please connect to DoorLock Wi-Fi.");
+        // Alert.alert("Not Connected", "Please connect to DoorLock Wi-Fi.");
+        showToast.error("Please connect to DoorLock Wi-Fi");
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to verify Wi-Fi connection.");
+      // Alert.alert("Error", "Unable to verify Wi-Fi connection.");
+      showToast.error("Unable to verify Wi-Fi connection");
       console.error("Error verifying Wi-Fi connection:", error);
     }
   };
@@ -101,13 +106,16 @@ const WifiScan = () => {
         await AsyncStorage.setItem("esp32IpAddress", "zenlock.local");
         await AsyncStorage.setItem("WifiSSID", ssid);
         // setEsp32IpAddress(ipAddress);
-        Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
+        // Alert.alert("Success", "Wi-Fi credentials sent to ESP32.");
+        showToast.success("Wi-Fi credentials sent to ESP32");
         setCredentialsSent(true);
       } else {
-        Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
+        // Alert.alert("Error", "Failed to send Wi-Fi credentials to ESP32.");
+        showToast.error("Failed to send Wi-Fi credentials to ESP32");
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
+      // Alert.alert("Error", "Unable to send Wi-Fi credentials to ESP32.");
+      showToast.error("Unable to send Wi-Fi credentials to ESP32");
       console.error("Error sending Wi-Fi credentials to ESP32:", error);
     } finally {
       setLoading(false);
@@ -143,13 +151,15 @@ const WifiScan = () => {
       await AsyncStorage.setItem("esp32IpAddress", "192.168.4.1");
       navigation.navigate("Home");
     } else {
-      Alert.alert("Error", "Please connect to DoorLock Wi-Fi.");
+      // Alert.alert("Error", "Please connect to DoorLock Wi-Fi.");
+      showToast.error("Please connect to DoorLock Wi-Fi");
     }
   };
 
   const handleAdminRegistration = async (name: string, ID: string) => {
     if (!name) {
-      Alert.alert("Error", "Please enter your name.");
+      // Alert.alert("Error", "Please enter your name.");
+      showToast.warning("Please enter your name");
       return;
     }
     try {
@@ -170,16 +180,19 @@ const WifiScan = () => {
         await AsyncStorage.setItem("isAdmin", "true");
         await AsyncStorage.setItem("adminID", adminID);
         await AsyncStorage.setItem("adminName", name);
-        Alert.alert("Success", "Admin registered successfully.");
+        // Alert.alert("Success", "Admin registered successfully.");
+        showToast.success("Admin registered successfully");
       } else {
         setLoading(false);
         setAdminRegistered(false);
-        Alert.alert("Error", "Failed to register admin.");
+        // Alert.alert("Error", "Failed to register admin.");
+        showToast.error("Failed to register admin");
       }
     } catch (error) {
       setLoading(false);
       setAdminRegistered(false);
-      Alert.alert("Error", "Unable to register admin.");
+      // Alert.alert("Error", "Unable to register admin.");
+      showToast.error("Unable to register admin");
       console.error("Error registering admin:", error);
     }
   };

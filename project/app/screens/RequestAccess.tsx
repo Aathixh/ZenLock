@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types";
 import WifiManager from "react-native-wifi-reborn";
+import { showToast } from "../common/ToastMessage";
 
 const { width, height } = Dimensions.get("window");
 
@@ -72,14 +73,15 @@ const RequestAccess = () => {
     } catch (error) {
       console.error("Error in sendRequest:", error);
       setIsLoading(false);
-      Alert.alert("Error", "Failed to send request. Please try again.", [
-        {
-          text: "OK",
-          onPress: () => {
-            console.log("Error alert closed");
-          },
-        },
-      ]);
+      // Alert.alert("Error", "Failed to send request. Please try again.", [
+      //   {
+      //     text: "OK",
+      //     onPress: () => {
+      //       console.log("Error alert closed");
+      //     },
+      //   },
+      // ]);
+      showToast.error("Failed to send request. Please try again.");
     }
   };
 
@@ -113,6 +115,14 @@ const RequestAccess = () => {
         keyboardType="numeric"
       />
       <Slider onComplete={() => sendRequest(generatedIdRef.current)} />
+
+      <View style={styles.noteContainer}>
+        <Text style={styles.noteText}>
+          <Text style={styles.noteBold}>Note:{"\t"}</Text>
+          You must connect to the same WiFi network that the controller is
+          connected to. Also ensure Location service is turned on.
+        </Text>
+      </View>
     </View>
   );
 };
@@ -151,5 +161,25 @@ const styles = StyleSheet.create({
     marginTop: RFValue(20),
     backgroundColor: "#fff",
     marginBottom: RFValue(20),
+  },
+  noteContainer: {
+    position: "absolute",
+    bottom: RFValue(20),
+    paddingHorizontal: RFValue(20),
+    width: width * 0.9,
+    padding: RFValue(10),
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: RFValue(10),
+  },
+  noteText: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: RFValue(12),
+    fontFamily: "Poppins-Reg",
+    textAlign: "center",
+    lineHeight: RFValue(18),
+  },
+  noteBold: {
+    fontFamily: "Poppins-Med",
+    color: "#fff",
   },
 });

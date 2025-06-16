@@ -19,6 +19,7 @@ import Slider from "../common/Slider";
 import Copy from "../../assets/Copy";
 import * as Clipboard from "expo-clipboard";
 import Cancel from "../../assets/Cancel";
+import { showToast } from "../common/ToastMessage";
 
 const { width, height } = Dimensions.get("window");
 
@@ -42,10 +43,11 @@ const sendUserToESP32 = async (user: User) => {
   try {
     const esp32Address = await getESP32Address();
     if (!esp32Address) {
-      Alert.alert(
-        "Error",
-        "ESP32 not connected. Please connect to ESP32 first."
-      );
+      // Alert.alert(
+      //   "Error",
+      //   "ESP32 not connected. Please connect to ESP32 first."
+      // );
+      showToast.warning("ESP32 not connected. Please connect to ESP32 first.");
       return false;
     }
 
@@ -81,10 +83,11 @@ const deleteUserFromESP32 = async (userId: string) => {
   try {
     const esp32Address = await getESP32Address();
     if (!esp32Address) {
-      Alert.alert(
-        "Error",
-        "ESP32 not connected. Please connect to ESP32 first."
-      );
+      // Alert.alert(
+      //   "Error",
+      //   "ESP32 not connected. Please connect to ESP32 first."
+      // );
+      showToast.warning("ESP32 not connected. Please connect to ESP32 first.");
       return false;
     }
     const controller = new AbortController();
@@ -181,7 +184,8 @@ const UserManagementScreen = () => {
   const copyToClipboard = async () => {
     if (generatedId) {
       await Clipboard.setStringAsync(generatedId);
-      Alert.alert("Copied to clipboard");
+      // Alert.alert("Copied to clipboard");
+      showToast.info("Copied to clipboard");
     }
   };
 
@@ -201,7 +205,8 @@ const UserManagementScreen = () => {
     console.log("Current generatedId ref:", generatedIdRef.current);
 
     if (!currentName.trim()) {
-      Alert.alert("Error", "Please enter a user name");
+      // Alert.alert("Error", "Please enter a user name");
+      showToast.warning("Please enter a user name");
       return;
     }
 
@@ -231,13 +236,16 @@ const UserManagementScreen = () => {
         setGeneratedId("");
         generatedIdRef.current = "";
 
-        Alert.alert("Success", "User added successfully");
+        // Alert.alert("Success", "User added successfully");
+        showToast.success("User added successfully");
       } else {
-        Alert.alert("Error", "Failed to add user to ESP32");
+        // Alert.alert("Error", "Failed to add user to ESP32");
+        showToast.error("Failed to add user to ESP32");
       }
     } catch (error) {
       console.error("Error adding user:", error);
-      Alert.alert("Error", "Failed to add user");
+      // Alert.alert("Error", "Failed to add user");
+      showToast.error("Failed to add user");
     } finally {
       setLoading(false);
     }
@@ -257,7 +265,8 @@ const UserManagementScreen = () => {
         <TouchableOpacity
           onPress={() => {
             Clipboard.setStringAsync(item.id);
-            Alert.alert("Copied", "User ID copied to clipboard");
+            // Alert.alert("Copied", "User ID copied to clipboard");
+            showToast.info("User ID copied to clipboard");
           }}
           style={styles.copyButton}
         >
@@ -297,16 +306,19 @@ const UserManagementScreen = () => {
                   saveUsers(updatedUsers);
                   return updatedUsers;
                 });
-                Alert.alert("Success", "User deleted successfully");
+                // Alert.alert("Success", "User deleted successfully");
+                showToast.success("User deleted successfully");
                 setLoading(false);
               } else {
-                Alert.alert("Error", "Failed to delete user from ESP32");
+                // Alert.alert("Error", "Failed to delete user from ESP32");
+                showToast.error("Failed to delete user from ESP32");
                 setLoading(false);
                 return;
               }
             } catch (error) {
               console.error("Error deleting user:", error);
-              Alert.alert("Error", "Failed to delete user");
+              // Alert.alert("Error", "Failed to delete user");
+              showToast.error("Failed to delete user");
               setLoading(false);
             }
           },
