@@ -63,8 +63,8 @@ const Home = () => {
       if (esp32IpAddress) {
         await verifyHomeWifiConnection(esp32IpAddress);
       }
-      await fetchBatteryPercentage();
       await checkStoredDoorState();
+      await fetchBatteryPercentage();
     }, 30000); // Check every 30 seconds
   }, [esp32IpAddress]);
 
@@ -204,7 +204,12 @@ const Home = () => {
         const storedSSID = await AsyncStorage.getItem("WifiSSID");
         console.log(`Current SSID: ${currentSSID}, Stored SSID: ${storedSSID}`);
         console.log(`Pinging address: ${addressToPing}`);
-        const response = await fetch(`http://${addressToPing}/ping`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+        const response = await fetch(`http://${addressToPing}/ping`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
         console.log(`Ping response for ${addressToPing}:`, response);
 
         // if (currentSSID === storedSSID && response.ok) {
@@ -513,7 +518,13 @@ const Home = () => {
         <TouchableOpacity
           onPress={
             connected
-              ? toggleResetButton
+              ? isAdmin
+                ? toggleResetButton
+                : () =>
+                    Alert.alert(
+                      "Access Denied",
+                      "Only administrators can reset the device."
+                    )
               : () => navigation.navigate("WifiScan")
           }
         >
@@ -591,7 +602,9 @@ const Home = () => {
           <View style={styles.statusItem}>
             <TouchableOpacity
               style={{ justifyContent: "center" }}
-              onPress={() => {}}
+              onPress={() => {
+                navigation.navigate("RequestAccess");
+              }}
             >
               <Text style={styles.statusText}>Request Access</Text>
             </TouchableOpacity>

@@ -3,4 +3,5 @@ export type RootStackParamList = {
   Home: undefined;
   WifiScan: undefined;
   UserManagement: undefined;
+  RequestAccess: undefined;
 };

@@ -7,6 +7,7 @@ import HomeScreen from "./screens/Home";
 import { enableScreens } from "react-native-screens";
 import WifiScan from "./screens/setup/WifiScan";
 import UserManagement from "./screens/UserManagementScreen";
+import RequestAccess from "./screens/RequestAccess";
 enableScreens();
 const Stack = createStackNavigator();
 
@@ -38,6 +39,11 @@ export default function App() {
             name="UserManagement"
             component={UserManagement}
             options={{ title: "User Management" }}
+          />
+          <Stack.Screen
+            name="RequestAccess"
+            component={RequestAccess}
+            options={{ title: "Request Access" }}
           />
         </Stack.Navigator>
       </NavigationContainer>

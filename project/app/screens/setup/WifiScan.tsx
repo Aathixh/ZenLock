@@ -9,7 +9,6 @@ import {
 import React, { useEffect, useState } from "react";
 import { FlatList } from "react-native-gesture-handler";
 import WifiManager, { WifiEntry } from "react-native-wifi-reborn";
-import * as Location from "expo-location";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { LinearGradient } from "expo-linear-gradient";
 import RedirectBox from "../../common/redirectBox";
