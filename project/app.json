@@ -7,21 +7,45 @@
     "icon": "./assets/ZenLock.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "image": null,
+      "resizeMode": "contain",
+      "backgroundColor": "transparent"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "splash": {
+        "image": null,
+        "backgroundColor": "transparent",
+        "resizeMode": "contain"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/ZenLock.png",
+        "backgroundColor": "#3E5C76"
+      },
+      "splashScreen": {
+        "image": null,
+        "backgroundColor": "transparent",
+        "resizeMode": "contain"
       },
       "package": "com.anonymous.zenlock",
       "permissions": ["android.permission.ACCESS_FINE_LOCATION"]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/ZenLock.png"
     },
-    "plugins": ["react-native-wifi-reborn", "expo-dev-client"],
+    "plugins": [
+      "react-native-wifi-reborn",
+      "expo-dev-client",
+      [
+        "expo-splash-screen",
+        {
+          "enabled": false
+        }
+      ]
+    ],
     "owner": "aathixh",
     "extra": {
       "eas": {

@@ -39,8 +39,9 @@ const getESP32Address = async () => {
   }
 };
 
-const sendUserToESP32 = async (user: User) => {
+const sendUserToESP32 = async (user: User, UID: string) => {
   try {
+    console.log("Sending user to ESP32:", user, "with UID:", UID);
     const esp32Address = await getESP32Address();
     if (!esp32Address) {
       // Alert.alert(
@@ -63,6 +64,7 @@ const sendUserToESP32 = async (user: User) => {
       body: new URLSearchParams({
         id: user.id,
         name: user.name,
+        UID: UID,
       }).toString(),
       signal: controller.signal,
     });
@@ -79,7 +81,7 @@ const sendUserToESP32 = async (user: User) => {
   }
 };
 
-const deleteUserFromESP32 = async (userId: string) => {
+const deleteUserFromESP32 = async (userId: string, UID: string) => {
   try {
     const esp32Address = await getESP32Address();
     if (!esp32Address) {
@@ -99,6 +101,7 @@ const deleteUserFromESP32 = async (userId: string) => {
       },
       body: new URLSearchParams({
         id: userId,
+        UID: UID,
       }).toString(),
       signal: controller.signal,
     });
@@ -199,28 +202,47 @@ const UserManagementScreen = () => {
   };
 
   const handleAddUser = async () => {
-    const currentName = userNameRef.current;
-    console.log("Current userName ref value:", currentName);
-    console.log("Current generatedId state:", generatedId);
-    console.log("Current generatedId ref:", generatedIdRef.current);
-
-    if (!currentName.trim()) {
-      // Alert.alert("Error", "Please enter a user name");
-      showToast.warning("Please enter a user name");
-      return;
-    }
-
-    // Use either the state or ref value, whichever exists
-    const idToUse = generatedId || generatedIdRef.current || generateID();
-    console.log("Using ID:", idToUse);
-
-    const newUser: User = {
-      id: idToUse,
-      name: currentName,
-    };
-    setLoading(true);
     try {
-      const sentToESP32 = await sendUserToESP32(newUser);
+      const currentName = userNameRef.current;
+      console.log("Current userName ref value:", currentName);
+      console.log("Current generatedId state:", generatedId);
+      console.log("Current generatedId ref:", generatedIdRef.current);
+      const currentUserData = await AsyncStorage.getItem("users");
+      const currentUsers = currentUserData ? JSON.parse(currentUserData) : [];
+      const currentUserCount = currentUsers.length;
+
+      console.log("Current actual user count:", currentUserCount);
+      if (!currentName.trim()) {
+        console.log(users.length);
+        // Alert.alert("Error", "Please enter a user name");
+        showToast.warning("Please enter a user name");
+        return;
+      }
+
+      if (currentUserCount >= 4) {
+        showToast.warning(
+          "Maximum user limit reached (4 users)",
+          "Limit Reached"
+        );
+        return;
+      }
+
+      console.log("Current users length:", users.length);
+
+      // Use either the state or ref value, whichever exists
+      const idToUse = generatedId || generatedIdRef.current || generateID();
+      console.log("Using ID:", idToUse);
+
+      const newUser: User = {
+        id: idToUse,
+        name: currentName,
+      };
+      setLoading(true);
+      const GlobalUserID = await AsyncStorage.getItem("UserID");
+      const sentToESP32 = await sendUserToESP32(
+        newUser,
+        GlobalUserID as string
+      );
       if (sentToESP32) {
         // Use a callback to ensure we have the latest users state
         setUsers((currentUsers) => {
@@ -297,7 +319,11 @@ const UserManagementScreen = () => {
           onPress: async () => {
             setLoading(true);
             try {
-              const deletedFromESP32 = await deleteUserFromESP32(userId);
+              const UID = await AsyncStorage.getItem("UserID");
+              const deletedFromESP32 = await deleteUserFromESP32(
+                userId,
+                UID as string
+              );
               if (deletedFromESP32) {
                 setUsers((currentUsers) => {
                   const updatedUsers = currentUsers.filter(
@@ -361,7 +387,17 @@ const UserManagementScreen = () => {
         </TouchableOpacity>
       </View>
       <Text style={[styles.head, { marginTop: height * 0.05 }]}>
-        Active Users
+        Active Users{"\t"}
+        <Text
+          style={[
+            styles.userCount,
+            {
+              color: users.length >= 4 ? "#FF3B30" : "rgba(255, 255, 255, 0.7)",
+            },
+          ]}
+        >
+          ({users.length}/4)
+        </Text>
       </Text>
       {loading ? (
         <View>
@@ -497,5 +533,10 @@ const styles = StyleSheet.create({
     fontSize: RFValue(14),
     textAlign: "center",
     marginTop: RFValue(10),
+  },
+  userCount: {
+    fontSize: RFValue(16),
+    fontFamily: "Poppins-Reg",
+    color: "rgba(255, 255, 255, 0.7)",
   },
 });

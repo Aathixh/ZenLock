@@ -31,7 +31,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "15.8.0",
     "react-native-toast-message": "^2.3.0",
-    "react-native-wifi-reborn": "^4.13.4"
+    "react-native-wifi-reborn": "^4.13.4",
+    "expo-splash-screen": "~0.29.24"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -50,6 +50,8 @@ const RequestAccess = () => {
           `ESP32 returned status ${response.status}: ${errorText}`
         );
       }
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
 
       if (response.status === 200) {
         Alert.alert("Success", "Access Granted", [
@@ -57,12 +59,13 @@ const RequestAccess = () => {
             text: "OK",
             onPress: async () => {
               setIsLoading(false);
-              setGeneratedId("");
-              generatedIdRef.current = "";
               await AsyncStorage.setItem("esp32IpAddress", "zenlock.local");
               await AsyncStorage.setItem("isAdmin", "false");
               const currentSSID = await WifiManager.getCurrentWifiSSID();
               await AsyncStorage.setItem("WifiSSID", currentSSID);
+              AsyncStorage.setItem("UserID", generatedIdRef.current);
+              setGeneratedId("");
+              generatedIdRef.current = "";
               console.log("Access granted, navigating to next screen");
               navigation.navigate("Home");
             },
@@ -70,7 +73,7 @@ const RequestAccess = () => {
         ]);
         console.log("Request sent successfully");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in sendRequest:", error);
       setIsLoading(false);
       // Alert.alert("Error", "Failed to send request. Please try again.", [
@@ -81,7 +84,7 @@ const RequestAccess = () => {
       //     },
       //   },
       // ]);
-      showToast.error("Failed to send request. Please try again.");
+      showToast.error(`${error.message}`);
     }
   };
 
@@ -133,6 +136,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
+    // justifyContent: "space-between", // This helps distribute space
   },
   head: {
     marginTop: height * 0.1,
@@ -163,8 +167,7 @@ const styles = StyleSheet.create({
     marginBottom: RFValue(20),
   },
   noteContainer: {
-    position: "absolute",
-    bottom: RFValue(20),
+    top: RFValue(160),
     paddingHorizontal: RFValue(20),
     width: width * 0.9,
     padding: RFValue(10),

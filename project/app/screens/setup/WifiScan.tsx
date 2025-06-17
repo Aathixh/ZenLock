@@ -88,6 +88,7 @@ const WifiScan = () => {
   const handleConnect = async (password: string) => {
     try {
       setLoading(true);
+      const GlobalUserID = await AsyncStorage.getItem("UserID");
       const response = await fetch("http://192.168.4.1/setup", {
         method: "POST",
         headers: {
@@ -96,10 +97,11 @@ const WifiScan = () => {
         body: new URLSearchParams({
           ssid: selectedWifi,
           password: password,
+          UID: GlobalUserID as string,
         }).toString(),
       });
-      const responseText = await response.text();
-      console.log(response);
+      // const responseText = await response.text();
+      // console.log(response);
       if (response.ok) {
         // const ipAddress = responseText.split("IP: ")[1];
         const ssid = selectedWifi;
@@ -171,14 +173,20 @@ const WifiScan = () => {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({ id: adminID, name: name }).toString(),
+        body: new URLSearchParams({
+          id: adminID,
+          name: name,
+          isAdmin: "true",
+        }).toString(),
       });
+      const responseText = await response.text();
+      console.log(responseText);
 
       if (response.ok) {
         setAdminRegistered(true);
         setLoading(false);
         await AsyncStorage.setItem("isAdmin", "true");
-        await AsyncStorage.setItem("adminID", adminID);
+        await AsyncStorage.setItem("UserID", adminID);
         await AsyncStorage.setItem("adminName", name);
         // Alert.alert("Success", "Admin registered successfully.");
         showToast.success("Admin registered successfully");
@@ -186,7 +194,7 @@ const WifiScan = () => {
         setLoading(false);
         setAdminRegistered(false);
         // Alert.alert("Error", "Failed to register admin.");
-        showToast.error("Failed to register admin");
+        showToast.error(responseText || "Failed to register admin");
       }
     } catch (error) {
       setLoading(false);

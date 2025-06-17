@@ -50,6 +50,7 @@ const Home = () => {
   const [lockDelay, setLockDelay] = useState("");
   const [locationPermission, setLocationPermission] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [GlobalUserID, setGlobalUserID] = useState("");
 
   useEffect(() => {
     const initialize = async () => {
@@ -88,6 +89,9 @@ const Home = () => {
 
   const verifyAdminStatus = async () => {
     const Admin = await AsyncStorage.getItem("isAdmin");
+    const UserID = await AsyncStorage.getItem("UserID");
+    setGlobalUserID(UserID || "");
+    console.log(`GlobalUserID: ${UserID}`);
     setIsAdmin(Admin === "true");
     console.log(`Admin status: ${Admin}`);
   };
@@ -168,10 +172,11 @@ const Home = () => {
     // if (storedDoorState) {
     //   setDoorState(storedDoorState);
     // }
+    console.log(`Checking stored door state for IP: ${esp32IpAddress}`);
     if (!esp32IpAddress || !connected) return; //
     const url = `http://${esp32IpAddress}/doorState`;
     try {
-      console.log(`Checking door state at ${url}`);
+      // console.log(`Checking door state at ${url}`);
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -270,7 +275,16 @@ const Home = () => {
     try {
       console.log("Toggling door lock...");
       setLoading(true);
-      const response = await fetch(url, { signal: controller.signal });
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          UID: GlobalUserID,
+        }).toString(),
+        signal: controller.signal,
+      });
       console.log("Door lock response:", response);
       // if (response.ok) {
       //   // const newDoorState = doorState === "closed" ? "open" : "closed";
@@ -305,7 +319,7 @@ const Home = () => {
   const resetESP32 = async () => {
     if (!esp32IpAddress) return;
     const pingUrl = `http://${esp32IpAddress}/ping`;
-    const resetUrl = `http://${esp32IpAddress}/reset`;
+    const resetUrl = `http://${esp32IpAddress}/reset?UID=${GlobalUserID}`;
 
     try {
       setLoading(true);
@@ -427,9 +441,11 @@ const Home = () => {
     const data = new URLSearchParams({
       motorDelay: motorDelay,
       lockDelay: lockDelay,
+      UID: GlobalUserID,
     }).toString();
 
     try {
+      setLoading(true);
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -450,6 +466,8 @@ const Home = () => {
     } catch (error) {
       console.error("Error sending calibration data:", error);
       // Alert.alert("Error", "Unable to send calibration data.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -665,20 +683,29 @@ const Home = () => {
               thumbTintColor="#3E5C76"
             />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => setIsCalibrating(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={sendCalibrationData}
-              >
-                <Text style={styles.modalButtonText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
+            {loading ? (
+              <LottieView
+                style={{ width: RFValue(50), height: RFValue(50) }}
+                source={require("../../assets/loaderAnim.json")}
+                autoPlay
+                loop
+              />
+            ) : (
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setIsCalibrating(false)}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={sendCalibrationData}
+                >
+                  <Text style={styles.modalButtonText}>Submit</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
