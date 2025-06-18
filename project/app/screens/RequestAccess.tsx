@@ -29,7 +29,7 @@ const RequestAccess = () => {
     try {
       setIsLoading(true);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 65000);
       const response = await fetch("http://zenlock.local/requestAccess", {
         method: "POST",
         headers: {

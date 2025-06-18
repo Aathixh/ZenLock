@@ -56,8 +56,8 @@ const Home = () => {
     const initialize = async () => {
       await requestLocationPermission();
       await checkStoredIpAddress();
-      await checkStoredDoorState();
       await verifyAdminStatus();
+      // await checkStoredDoorState();
     };
     initialize();
 
@@ -65,8 +65,8 @@ const Home = () => {
       if (esp32IpAddress) {
         await verifyHomeWifiConnection(esp32IpAddress);
       }
-      await checkStoredDoorState();
-      await fetchBatteryPercentage();
+      // await checkStoredDoorState();
+      // await fetchBatteryPercentage();
     }, 30000); // Check every 30 seconds
   }, [esp32IpAddress]);
 
@@ -133,39 +133,39 @@ const Home = () => {
     }, [])
   );
 
-  const fetchBatteryPercentage = async () => {
-    console.log(`Fetching battery percentage for IP: ${esp32IpAddress}`);
-    if (!esp32IpAddress || connected) return;
-    const url = `http://${esp32IpAddress}/battery`;
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        const voltage = data.battery;
+  // const fetchBatteryPercentage = async () => {
+  // };
+  //   console.log(`Fetching battery percentage for IP: ${esp32IpAddress}`);
+  //   if (!esp32IpAddress || connected) return;
+  //   const url = `http://${esp32IpAddress}/battery`;
+  //   try {
+  //     const response = await fetch(url);
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       const voltage = data.battery;
 
-        // Define voltage range
-        const minVoltage = 3.7;
-        const maxVoltage = 4.2;
+  //       // Define voltage range
+  //       const minVoltage = 3.7;
+  //       const maxVoltage = 4.2;
 
-        // Calculate battery percentage
-        let batteryPercentage;
-        if (voltage <= minVoltage) {
-          batteryPercentage = 0; // Battery is 0% if voltage is below 3.3V
-        } else if (voltage >= maxVoltage) {
-          batteryPercentage = 100; // Battery is 100% if voltage is above 4.02V
-        } else {
-          batteryPercentage =
-            ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100;
-        }
+  //       // Calculate battery percentage
+  //       let batteryPercentage;
+  //       if (voltage <= minVoltage) {
+  //         batteryPercentage = 0; // Battery is 0% if voltage is below 3.3V
+  //       } else if (voltage >= maxVoltage) {
+  //         batteryPercentage = 100; // Battery is 100% if voltage is above 4.02V
+  //       } else {
+  //         batteryPercentage =
+  //           ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100;
+  //       }
 
-        setBatteryPercentage(Math.round(batteryPercentage).toString()); // Set battery percentage as integer
-      }
-    } catch (error) {
-      // Alert.alert("Error", "Unable to fetch battery percentage.");
-      console.error("Error fetching battery percentage:", error);
-      setBatteryPercentage("");
-    }
-  };
+  //       setBatteryPercentage(Math.round(batteryPercentage).toString()); // Set battery percentage as integer
+  //     }
+  //   } catch (error) {
+  //     // Alert.alert("Error", "Unable to fetch battery percentage.");
+  //     console.error("Error fetching battery percentage:", error);
+  //     setBatteryPercentage("");
+  //   }
 
   const checkStoredDoorState = async () => {
     // const storedDoorState = await AsyncStorage.getItem("door_state");
@@ -177,7 +177,12 @@ const Home = () => {
     const url = `http://${esp32IpAddress}/doorState`;
     try {
       // console.log(`Checking door state at ${url}`);
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 10 seconds timeout
+      const response = await fetch(url, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       if (response.ok) {
         const data = await response.json();
         console.log("Door state response:", data);
@@ -209,33 +214,59 @@ const Home = () => {
       try {
         const currentSSID = await WifiManager.getCurrentWifiSSID();
         const storedSSID = await AsyncStorage.getItem("WifiSSID");
+        const currentUserID = await AsyncStorage.getItem("UserID");
         console.log(`Current SSID: ${currentSSID}, Stored SSID: ${storedSSID}`);
         console.log(`Pinging address: ${addressToPing}`);
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
-        const response = await fetch(`http://${addressToPing}/ping`, {
-          signal: controller.signal,
-        });
+        const timeoutId = setTimeout(() => controller.abort(), 65000); // 65 seconds timeout
+        console.log(
+          `Full URL: http://${addressToPing}/ping?UID=${currentUserID}`
+        );
+        const response = await fetch(
+          `http://${addressToPing}/ping?UID=${currentUserID}`,
+          {
+            signal: controller.signal,
+          }
+        );
         clearTimeout(timeoutId);
         console.log(`Ping response for ${addressToPing}:`, response);
 
-        // if (currentSSID === storedSSID && response.ok) {
-        //   setConnected(true);
-        // } else {
-        //   setConnected(false);
-        //   Alert.alert("Not Connected", "Please connect to Home Wi-Fi.");
-        // }
-        // if (currentSSID !== storedSSID && !response.ok) {
-        //   const discoveredIp = await discoverESP32();
-        //   if (typeof discoveredIp === "string") {
-        //     setEsp32IpAddress(discoveredIp);
-        //     verifyHomeWifiConnection(discoveredIp);
-        //   }
-        // } else {
-        //   setConnected(true);
-        //   console.log("Home Wi-Fi connection verified.");
-        // }
         if (response.ok) {
+          const pingData = await response.json();
+          console.log("Ping data received:", pingData);
+
+          // Update door state from ping response
+          if (pingData.state) {
+            setDoorState(pingData.state);
+            await AsyncStorage.setItem("doorState", pingData.state);
+            console.log(`Door state updated: ${pingData.state}`);
+          }
+
+          // Calculate and update battery percentage from ping response
+          if (pingData.battery) {
+            const voltage = parseFloat(pingData.battery);
+            // Define voltage range
+            const minVoltage = 3.7;
+            const maxVoltage = 4.2;
+
+            // Calculate battery percentage
+            let batteryPercentage;
+            if (voltage <= minVoltage) {
+              batteryPercentage = 0; // Battery is 0% if voltage is below min
+            } else if (voltage >= maxVoltage) {
+              batteryPercentage = 100; // Battery is 100% if voltage is above max
+            } else {
+              batteryPercentage =
+                ((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100;
+            }
+
+            setBatteryPercentage(Math.round(batteryPercentage).toString());
+            console.log(`Battery updated: ${Math.round(batteryPercentage)}%`);
+          }
+
+          // Always set connected to true if we got a successful response
+          // setConnected(true);
+
           if (addressToPing === "zenlock.local" && currentSSID === storedSSID) {
             setConnected(true);
             console.log("Home Wi-Fi connection verified via zenlock.local.");
@@ -318,14 +349,20 @@ const Home = () => {
 
   const resetESP32 = async () => {
     if (!esp32IpAddress) return;
-    const pingUrl = `http://${esp32IpAddress}/ping`;
+    const currentID = await AsyncStorage.getItem("UserID");
+    const pingUrl = `http://${esp32IpAddress}/ping?UID=${currentID}`;
     const resetUrl = `http://${esp32IpAddress}/reset?UID=${GlobalUserID}`;
 
     try {
       setLoading(true);
 
       // Ping the ESP32 to check the connection
-      const pingResponse = await fetch(pingUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+      const pingResponse = await fetch(pingUrl, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       if (!pingResponse.ok) {
         // Alert.alert("Error", "ESP32 is not connected.");
         showToast.error("ESP32 is not connected.");
@@ -333,8 +370,6 @@ const Home = () => {
       }
 
       // Send the reset command with a timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
 
       const resetResponse = await fetch(resetUrl, {
         signal: controller.signal,
@@ -434,7 +469,6 @@ const Home = () => {
     const url = `http://${esp32IpAddress}/calibrate`;
 
     if (!motorDelay || !lockDelay) {
-      // Alert.alert("Error", "Please enter valid motor and lock delay values.");
       showToast.error("Please enter valid motor and lock delay values.");
       return;
     }
@@ -446,26 +480,34 @@ const Home = () => {
 
     try {
       setLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: data,
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (response.ok) {
-        // Alert.alert("Success", "Calibration data sent successfully!");
         showToast.success("Calibration data sent successfully!");
-        setIsCalibrating(false); // Close the modal
+        setIsCalibrating(false);
       } else {
         const errorText = await response.text();
         console.error("Error response:", response.status, errorText);
-        // Alert.alert("Error", "Failed to send calibration data.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending calibration data:", error);
-      // Alert.alert("Error", "Unable to send calibration data.");
+      if (error.name === "AbortError") {
+        showToast.error("Request timed out. Please try again.");
+      } else {
+        showToast.error("Unable to send calibration data.");
+      }
     } finally {
       setLoading(false);
     }

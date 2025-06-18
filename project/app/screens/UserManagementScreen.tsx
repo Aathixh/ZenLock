@@ -55,7 +55,7 @@ const sendUserToESP32 = async (user: User, UID: string) => {
     console.log(`Sending user to ESP32 at ${esp32Address}:`, user);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 65000);
     const response = await fetch(`http://${esp32Address}/register`, {
       method: "POST",
       headers: {
@@ -93,7 +93,7 @@ const deleteUserFromESP32 = async (userId: string, UID: string) => {
       return false;
     }
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 65000);
     const response = await fetch(`http://${esp32Address}/delete`, {
       method: "POST",
       headers: {

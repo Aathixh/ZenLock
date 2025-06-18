@@ -89,6 +89,9 @@ const WifiScan = () => {
     try {
       setLoading(true);
       const GlobalUserID = await AsyncStorage.getItem("UserID");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch("http://192.168.4.1/setup", {
         method: "POST",
         headers: {
@@ -99,7 +102,8 @@ const WifiScan = () => {
           password: password,
           UID: GlobalUserID as string,
         }).toString(),
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
       // const responseText = await response.text();
       // console.log(response);
       if (response.ok) {
